@@ -228,7 +228,12 @@ const CUM_PINS = (() => {
 function pinsForRung(n, base = banked()) {
   const want = CUM_COST[n - 1];
   if (want <= base) return 0;
-  const credit = state.replay ? CUM_PINS[n - 1] - ladderReach(base).pins : 0;
+  /* Credit only the rewards PASSED ON THE WAY, never reward n itself. Its own
+     pinballs arrive for reaching it, so counting them is borrowing against a
+     payout you have not had: reward 1 costs 78 balls and pays 80, which made it
+     look free. Wrong for all 18 pinball-paying rewards, worst at reward 50. */
+  const earned = n > 1 ? CUM_PINS[n - 2] : 0;
+  const credit = state.replay ? Math.max(0, earned - ladderReach(base).pins) : 0;
   const balls = (want - base) / (MACHINE.pBulb * MACHINE.perHit);
   return Math.max(0, Math.ceil(balls - credit));
 }
@@ -562,7 +567,7 @@ function renderLadder(r) {
         step.note ? ` <span class="flag" title="${esc(step.note)}">?</span>` : ''}</td>
       <td class="c">${num(step.cost)}</td>
       <td class="c cum">${num(cum)}</td>
-      <td class="c odds">${need > 0 ? num(need) : '✓'}</td>
+      <td class="c odds">${need > 0 ? num(need) : ''}</td>
     </tr>`);
   }
 
