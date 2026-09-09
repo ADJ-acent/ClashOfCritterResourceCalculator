@@ -20,7 +20,9 @@
 
 <header>
   <div class="head-main">
-    <h1>Clash of Critters Lightbulb Reward Calculator</h1>
+    <h1>Clash of Critters Lightbulb Reward Calculator
+      <button type="button" id="wipBadge" title="What is unfinished?">work in progress</button>
+    </h1>
     <p>Tatari Party (also called Mad Invention or Rebuild, the same track under three names) pays out top to bottom. You do not spend lightbulbs. You win them from the pinball machine, and Tatari Party pays pinballs back that you play again. Enter the pinballs you hold and this solves that loop exactly.</p>
   </div>
 </header>
@@ -163,6 +165,20 @@
 </footer>
 
 <div id="helpPop" hidden></div>
+
+<!-- Shown once per browser, and any time from the "work in progress" badge.
+     The version in the localStorage key means a later notice fires again. -->
+<dialog id="wipDialog" class="wip-dialog" aria-labelledby="wipTitle">
+  <h2 id="wipTitle">This calculator is still a work in progress</h2>
+  <p>The numbers come from a handful of recorded runs rather than from the game's own
+     tables, so treat them as a good estimate and not gospel. A few rewards on the track
+     are still unconfirmed, one was never written down at all, and the layout is likely
+     to keep changing.</p>
+  <p>If something looks wrong, it may well be. Please check back later.</p>
+  <div class="wip-actions">
+    <button id="wipClose" type="button" class="primary">Got it</button>
+  </div>
+</dialog>
 
 <script src="data.js"></script>
 <script src="machine.js"></script>

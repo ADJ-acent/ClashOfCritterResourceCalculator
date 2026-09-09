@@ -633,6 +633,31 @@ function initHelp() {
   });
 }
 
+/* ---------- work in progress notice ------------------------------------------
+   Opens once per browser, and any time from the badge in the header. The
+   version sits in the key so a later notice fires again for people who already
+   dismissed this one. */
+
+const WIP_SEEN = 'coc.rc.seenWip.1';
+
+function initWipNotice() {
+  const dlg = $('wipDialog');
+  const open = () => {
+    if (typeof dlg.showModal === 'function' && !dlg.open) dlg.showModal();
+  };
+
+  let seen = null;
+  try { seen = localStorage.getItem(WIP_SEEN); } catch (_) { seen = null; }
+  if (seen !== '1') open();
+
+  $('wipBadge').addEventListener('click', open);
+  $('wipClose').addEventListener('click', () => {
+    dlg.close();
+    // A private window can refuse to store, and the notice is not worth an error.
+    try { localStorage.setItem(WIP_SEEN, '1'); } catch (_) { /* shown again next time */ }
+  });
+}
+
 /* ---------- wiring --------------------------------------------------------- */
 
 /* `target` is the reward a click on the ladder asked for. Reaching it makes it
@@ -886,6 +911,7 @@ function init() {
   $('replayLabel').textContent = `Use the pinball rewards from ${TRACK} immediately`;
   $('ladderHeading').textContent = `${TRACK} rewards`;
 
+  initWipNotice();
   initHelp();
   render();
 }
