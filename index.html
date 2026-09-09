@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>Clash of Critters Lightbulb Reward Calculator</title>
+<meta name="description" content="Free Clash of Critters calculator for the Mad Invention / Tatari Party / Rebuild reward track: enter your lightbulbs and see exactly how many pinballs, catch Tataris, energy drinks and materials the ladder pays out." />
+<meta name="theme-color" content="#15171c" />
+
+<!-- Open Graph (link previews on Discord, Reddit, forums, etc.) -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Clash of Critters Resource Calculator" />
+<meta property="og:title" content="Clash of Critters Lightbulb Reward Calculator" />
+<meta property="og:description" content="Enter your lightbulbs and see exactly what the Mad Invention / Tatari Party / Rebuild reward track pays out." />
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header>
+  <div class="head-main">
+    <h1>Clash of Critters Lightbulb Reward Calculator</h1>
+    <p>Tatari Party (also called Mad Invention or Rebuild, the same track under three names) pays out top to bottom. You do not spend lightbulbs. You win them from the pinball machine, and Tatari Party pays pinballs back that you play again. Enter the pinballs you hold and this solves that loop exactly.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ CONTROLS ============
+       Two panels, not one: the pinball count is the input people actually
+       change, so it leads, and on a phone the results slot in between it and
+       the settings below, instead of sitting under a screenful of controls. -->
+  <div class="side">
+  <div class="panel controls controls-primary">
+    <section>
+      <h2>Pinballs in hand <button type="button" class="q" data-help="pins" aria-label="What is this?">?</button></h2>
+      <div class="row">
+        <input id="pins" type="number" min="0" step="10" value="0" inputmode="numeric" />
+        <button id="clearAll" class="danger">Clear</button>
+      </div>
+      <input id="slider" class="slider" type="range" min="0" max="50000" step="10" value="0"
+             aria-label="Pinballs in hand" />
+      <div class="slider-scale"><span>0</span><span id="sliderMax"></span></div>
+      <div class="quick-add" id="quickAdd">
+        <button data-add="100">+100</button>
+        <button data-add="500">+500</button>
+        <button data-add="1000">+1,000</button>
+        <button data-add="5000">+5,000</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="panel controls controls-more">
+    <section>
+      <h2>Active event <button type="button" class="q" data-help="event" aria-label="What is this?">?</button></h2>
+      <div class="row">
+        <label><span class="sr-label">Active event</span>
+          <select id="sideSelect"></select>
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Gold Rush <button type="button" class="q" data-help="gold" aria-label="What is this?">?</button></h2>
+      <label class="check">
+        <input type="checkbox" id="goldRush" checked />
+        <span>Gold Rush is active</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Winnings <button type="button" class="q" data-help="replay" aria-label="What is this?">?</button></h2>
+      <label class="check">
+        <input type="checkbox" id="replay" checked />
+        <span id="replayLabel"></span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Luck <button type="button" class="q" data-help="spread" aria-label="What is this?">?</button></h2>
+      <label class="check">
+        <input type="checkbox" id="advanced" />
+        <span>Show the spread</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Launch size <button type="button" class="q" data-help="launch" aria-label="What is this?">?</button></h2>
+      <div class="quick-add mult-row" id="multRow"></div>
+    </section>
+
+    <section>
+      <h2>Where you are now <button type="button" class="q" data-help="where" aria-label="What is this?">?</button></h2>
+      <div class="row">
+        <label><span class="sr-label">Lightbulbs for your current reward</span>
+          <input id="rungCost" type="number" min="0" step="10" value="0" inputmode="numeric" />
+        </label>
+        <span class="hint" style="margin:0">on the card now</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label><span class="sr-label">Which reward</span>
+          <select id="rungPick"></select>
+        </label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label><span class="sr-label">Lightbulbs already toward it</span>
+          <input id="rungProgress" type="number" min="0" step="10" value="0" inputmode="numeric" />
+        </label>
+        <span class="hint" style="margin:0">already toward it</span>
+      </div>
+      <div class="hint" id="rungNote"></div>
+    </section>
+
+  </div>
+  </div>
+
+  <!-- ============ RESULTS ============ -->
+  <div class="panel results">
+    <div id="summary"></div>
+
+    <p id="distEmpty" class="empty-note" hidden>
+      Enter the pinballs you hold, above, to see what they turn into.
+    </p>
+
+    <div id="distBox" class="dist" hidden>
+      <div class="dist-head">
+        <h2 class="sec" style="margin:0">How it could land <button type="button" class="q" data-help="dist" aria-label="What is this?">?</button></h2>
+        <span id="distLabel" class="muted small"></span>
+      </div>
+      <div class="dist-chart"></div>
+      <div class="dist-scale muted small"></div>
+      <div class="dist-picks">
+        <button data-pctl="0.02">Worst</button>
+        <button data-pctl="0.1">Unlucky</button>
+        <button data-pctl="0.5">Median</button>
+        <button data-pctl="0.9">Lucky</button>
+        <button data-pctl="0.98">Best</button>
+        <span class="hint" style="margin:0">or drag the chart</span>
+      </div>
+    </div>
+
+    <h2 class="sec">What you get</h2>
+    <div id="resList" class="res-list"></div>
+
+    <h2 class="sec" id="ladderHeading"></h2>
+    <div class="ladder-wrap">
+      <table id="ladder">
+        <thead><tr><th>#</th><th>Reward</th><th class="c">Cost</th><th class="c">Total</th><th class="c">Pinballs <button type="button" class="q" data-help="need" aria-label="What is this?">?</button></th></tr></thead>
+        <tbody id="ladderBody"></tbody>
+      </table>
+    </div>
+    <div class="hint" id="ladderTotal"></div>
+    <div class="hint">Click any row to fill in the pinballs that get you there.</div>
+
+  </div>
+</div>
+
+<footer>
+  © 2026 Andy Jiang ·
+  <a href="https://adj-acent.github.io/ClashOfCritterTreasureHuntSolver/" target="_blank" rel="noopener">Treasure Hunt Solver</a><br>
+  Fan-made tool. Not affiliated with or endorsed by the game or its publisher.
+</footer>
+
+<div id="helpPop" hidden></div>
+
+<script src="data.js"></script>
+<script src="machine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

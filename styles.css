@@ -1,0 +1,379 @@
+/* Shares the palette and shell of the Treasure Hunt solver so the two read as
+   sibling sites: same tokens, same header/footer, same flat two-column body
+   that collapses into cards on mobile. */
+:root {
+  --bg: #15171c;
+  --panel: #1e2128;
+  --panel2: #262a33;
+  --line: #333845;
+  --text: #e6e8ec;
+  --muted: #9aa3b2;
+  --accent: #ffd24a;
+  --dim: #2a2d34;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.4;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+header .head-main { min-width: 0; max-width: 980px; }
+header h1 { margin: 0 0 2px; font-size: 18px; }
+header p { margin: 0; color: var(--muted); font-size: 13px; }
+
+.wrap {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.panel { padding: 0; }
+/* The left column holds two panels so the pinball input can lead and, on a
+   phone, the results can slot in between it and the rest of the settings. */
+.side {
+  width: 300px;
+  flex: 0 0 auto;
+  border-right: 1px solid var(--line);
+  padding-right: 24px;
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.controls { min-width: 0; }
+.results { flex: 1 1 620px; min-width: 0; max-width: 720px; }
+
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+h2.sec { margin: 22px 0 10px; }
+section { margin-bottom: 18px; }
+label { font-size: 14px; color: var(--muted); }
+.sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.small { font-size: 12px; }
+.muted { color: var(--muted); }
+
+input[type=number], select {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 15px;
+}
+input[type=number] { width: 130px; font-variant-numeric: tabular-nums; }
+select { width: 100%; }
+input:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+
+button {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:hover { border-color: #4a5160; }
+button.danger { color: #ff8a8a; }
+.quick-add { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.quick-add button { font-size: 12px; padding: 4px 8px; font-variant-numeric: tabular-nums; }
+
+.check { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; color: var(--text); }
+
+.mult-row button { min-width: 38px; }
+.mult-row button.sel {
+  background: var(--accent); border-color: var(--accent);
+  color: #1a1a1a; font-weight: 700;
+}
+
+/* Range input: the track and thumb have to be styled per engine, and the
+   -webkit- and -moz- rules cannot be merged into one selector list, because a browser
+   drops the whole rule when it meets a pseudo-element it doesn't know. */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  margin: 12px 0 3px;
+  background: transparent;
+  cursor: pointer;
+}
+.slider::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 4px;
+  background: var(--dim); border: 1px solid var(--line);
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px; margin-top: -7px;
+  border: none; border-radius: 50%;
+  background: var(--accent);
+}
+.slider::-moz-range-track {
+  height: 6px; border-radius: 4px;
+  background: var(--dim); border: 1px solid var(--line);
+}
+.slider::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border: none; border-radius: 50%;
+  background: var(--accent);
+}
+.slider-scale {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- summary ---------- */
+/* Names what the figures below actually are, so a middle-of-the-range number is
+   never mistaken for a promise. */
+.view-label { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.view-label b { font-size: 16px; font-weight: 700; }
+.view-label span { font-size: 12px; color: var(--muted); }
+.stat-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.stat {
+  flex: 1 1 140px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.stat b { display: block; font-size: 24px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+/* A range is roughly twice the characters, so it drops a size to stay on one line. */
+.stat b.ranged { font-size: 17px; line-height: 1.5; }
+.stat span { font-size: 12px; color: var(--muted); }
+/* The likely-range line under a stat. Reserved height even when the outcome is
+   certain, so turning randomness on and off doesn't resize the row. */
+.stat i, .stat .range {
+  display: block; min-height: 15px;
+  font-size: 11px; font-style: normal; color: var(--muted); opacity: .8;
+  font-variant-numeric: tabular-nums;
+}
+.odds { color: var(--accent); }
+
+.next {
+  margin-top: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.next-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.next-head b { color: var(--accent); font-weight: 600; }
+.next .bar {
+  margin: 8px 0 4px;
+  height: 8px;
+  border-radius: 5px;
+  background: var(--dim);
+  overflow: hidden;
+}
+.next .bar i { display: block; height: 100%; background: var(--accent); }
+.done-note { color: var(--muted); }
+
+.empty-note {
+  margin: 22px 0 0;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- help ----------
+   A "?" button beside anything that needs a sentence, and one shared popover.
+   Fixed position, so opening it never moves the page. */
+button.q {
+  width: 16px; height: 16px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: var(--panel2); color: var(--muted);
+  font-size: 11px; font-weight: 700; line-height: 1;
+  cursor: help; vertical-align: middle;
+}
+button.q:hover { color: var(--accent); border-color: var(--accent); }
+#helpPop {
+  position: fixed; z-index: 60;
+  background: var(--panel2);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px; line-height: 1.55; color: var(--text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+  white-space: pre-wrap;      /* help text uses blank lines to separate ideas */
+  max-height: 70vh; overflow-y: auto;
+}
+
+/* ---------- outcome distribution ---------- */
+.dist { margin-top: 22px; }
+.dist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.dist-chart {
+  margin-top: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px 4px;
+  cursor: ew-resize;
+  touch-action: none;          /* dragging picks a percentile, it does not scroll */
+}
+.dist-chart svg { display: block; width: 100%; height: 76px; }
+.dist-chart rect.on { fill: var(--accent); }
+.dist-chart rect.off { fill: #3a4150; }
+.dist-chart line.mark { stroke: #fff; stroke-width: 1.5; opacity: .85; }
+.dist-scale { display: flex; justify-content: space-between; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.dist-picks { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.dist-picks button { font-size: 12px; padding: 4px 8px; }
+
+/* ---------- what you get ----------
+   One row per category, always all of them: an empty category shows 0 and dims
+   rather than disappearing, so the page never changes height when the active
+   event or Gold Rush is switched. */
+.res-list {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.res-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-top: 1px solid var(--line);
+}
+.res-row:first-child { border-top: none; }
+.res-row.empty { opacity: .4; }
+/* Always 30px wide, image or not, so the names line up whether or not that
+   category's sprite has been found yet. */
+.res-icon { width: 30px; height: 30px; object-fit: contain; flex: 0 0 auto; }
+.res-text { flex: 1 1 auto; min-width: 0; }
+.res-name { font-size: 15px; font-weight: 600; line-height: 1.25; }
+.res-sub { font-size: 11.5px; color: var(--muted); }
+.res-qty {
+  flex: 0 0 auto;
+  font-size: 20px; font-weight: 700;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.res-qty small { font-size: 13px; font-weight: 600; }
+/* A range needs more room than a single figure, so it steps down a size. */
+.res-qty .ranged { font-size: 15px; }
+.res-qty .extra {
+  display: block; margin-top: 1px;
+  font-size: 11px; font-weight: 600; color: var(--muted);
+}
+.res-qty { text-align: right; }
+
+
+/* ---------- ladder ---------- */
+.ladder-wrap {
+  max-height: 460px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+/* Fixed layout, not auto: the reward column's text changes with Gold Rush and
+   the active event ("165 Energy Drinks" vs "Candy"), and an auto table would
+   re-measure and slide every column sideways each time it is toggled. */
+table#ladder { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+#ladder th:nth-child(1) { width: 50px; }
+#ladder th:nth-child(3) { width: 70px; }
+#ladder th:nth-child(4) { width: 96px; }
+/* Wide enough for the header plus its "?", which otherwise wraps. */
+#ladder th:nth-child(5) { width: 92px; }
+#ladder td.odds { color: var(--accent); font-weight: 600; }
+#ladder thead th {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--panel2);
+  text-align: left; font-weight: 500; color: var(--muted);
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+}
+#ladder td { padding: 6px 10px; border-top: 1px solid var(--line); }
+#ladder tbody tr:first-child td { border-top: none; }
+#ladder .c { text-align: right; font-variant-numeric: tabular-nums; }
+/* nowrap: the ✓/★ suffix must sit beside the number, not wrap under it. */
+#ladder .n { color: var(--muted); width: 46px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#ladder .cum { color: var(--muted); }
+#ladder tbody tr { cursor: pointer; }
+#ladder tbody tr:hover td { background: var(--panel2); }
+#ladder tr.done td { color: var(--muted); }
+#ladder tr.done .n::after { content: " ✓"; color: #7fbf7f; }
+#ladder tr.cur td { background: rgba(255, 210, 74, .09); }
+#ladder tr.cur .rw { color: var(--accent); font-weight: 600; }
+#ladder tr.cur .n::after { content: " ★"; color: var(--accent); }
+#ladder tr.assumed .rw { font-style: italic; }
+.flag {
+  display: inline-block; min-width: 15px; text-align: center;
+  border: 1px solid var(--line); border-radius: 4px;
+  font-size: 10px; color: var(--muted); cursor: help; font-style: normal;
+}
+
+.notes { margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+footer {
+  width: 100%;
+  margin: 20px auto 0;
+  padding: 16px 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+  border-top: 1px solid var(--line);
+}
+footer a { color: var(--accent); }
+
+input, button, select, a { touch-action: manipulation; }
+
+/* ---------- mobile ---------- */
+@media (max-width: 760px) {
+  .wrap { padding: 12px; gap: 12px; flex-direction: column; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  /* `display: contents` dissolves the side wrapper so its two panels become
+     items of .wrap and can be ordered around the results: type your pinballs,
+     read the answer, and only then meet the settings. */
+  .side {
+    display: contents;
+    width: auto; border-right: none; padding-right: 0; position: static;
+  }
+  .controls-primary { order: 1; }
+  .results { order: 2; flex-basis: auto; width: 100%; }
+  .controls-more { order: 3; }
+  /* Three tiles across one narrow row beats two-then-one. */
+  .stat { flex: 1 1 120px; padding: 9px 10px; }
+  .stat b { font-size: 20px; }
+  .stat b.ranged { font-size: 14px; white-space: nowrap; }
+  /* The luck caption gets its own line rather than squeezing the heading. */
+  .dist-head { flex-wrap: wrap; }
+  .dist-head #distLabel { flex: 1 0 100%; }
+  .res-list { background: var(--panel2); }
+  .stat, .next, .ladder-wrap { background: var(--panel2); }
+  input[type=number], select { font-size: 16px; }  /* >=16px stops iOS zoom-on-focus */
+  .slider::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
+  .slider::-moz-range-thumb { width: 24px; height: 24px; }
+}
+
+/* The reward a ladder click asked for. Reaching it makes it the last claimed
+   row, so the star moves to the next one; this keeps the click visible. */
+#ladder tr.target td { background: rgba(255, 210, 74, .13); }
+#ladder tr.target td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+#ladder tr.target .rw { color: var(--accent); }
