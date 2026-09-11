@@ -2,9 +2,14 @@
 
 A single-page tool for the lightbulb reward track that the game ships under three
 names: **Mad Invention**, **Tatari Party** and **Rebuild**. They are one
-mechanism. Enter how many lightbulbs you have collected over the event and the
-page reports every resource the ladder has paid out, how far down the ladder you
-are, and what the next reward costs.
+mechanism, and the page calls it Tatari Party throughout (`TRACK` in `data.js`,
+one line to change when the event rotates its name).
+
+You do not spend lightbulbs, you win them: pinballs go through the machine, the
+machine pays lightbulbs, and the track pays pinballs back that you play again.
+So the inputs are **the pinballs you hold** and **which reward you are on**, and
+the page reports what those pinballs turn into. You can also work backwards from
+a resource you want.
 
 Sibling site: [Treasure Hunt Solver](https://adj-acent.github.io/ClashOfCritterTreasureHuntSolver/)
 (shares its palette and page shell).
@@ -75,8 +80,8 @@ describes. That is why "what you
 get" reports one concrete `k` rather than a blend: an averaged haul sits between
 two rungs and claims fractions of rewards nobody can receive, while a selected
 `k` is a run that could actually happen. The stat tiles keep the p10–p90 band
-beside them so the spread stays visible, and the ladder's `Chance` column is
-always distribution-wide.
+beside them so the spread stays visible, and the ladder's `Pinballs` column is
+independent of the viewing point.
 
 The chart clips its axis to the 0.2–99.8 percentile range; the support runs far
 wider than the mass, and drawing all of it squeezes the interesting part into a
@@ -240,6 +245,11 @@ whichever yields more.
   there is unknown.
 * Rung 13 is inferred to be a drink rung (recorded as candy twice, as 55 cans
   once, the signature of Gold Rush being on for one of the passes).
+* **The odds for pinballs paid by the machine's own slots are not measured.**
+  `MACHINE.pPinBack` / `perPinBack` are 0, so that path contributes nothing yet.
+  Setting them models the average only; the extra spread is still to do.
+* The lightbulb has no icon. It is downloaded content, absent from the client's
+  shipped bundles, unlike the other ten.
 
 ## Development
 
