@@ -90,6 +90,22 @@ function cumulativeHaul() {
   return rows;
 }
 
+/* The haul between two positions on the track: everything rewards `from+1` to
+   `to` pay, and nothing that was collected before you got here. */
+function haulSince(haul, from, to) {
+  const a = haul[Math.max(0, Math.min(from, haul.length - 1))];
+  const b = haul[Math.max(0, Math.min(to, haul.length - 1))];
+  const out = {};
+  for (const k of Object.keys(b)) {
+    out[k] = {
+      qty: Math.max(0, b[k].qty - a[k].qty),
+      count: Math.max(0, b[k].count - a[k].count),
+      varies: Math.max(0, b[k].varies - a[k].varies),
+    };
+  }
+  return out;
+}
+
 /* ---------- solving the loop ------------------------------------------------ */
 
 /* Everything the page shows, as exact expectations and quantiles over the
@@ -169,7 +185,10 @@ function compute() {
       fromLadder: R.pins,
       launches,
       played: launches * m,
-      haul: haul[R.rung],
+      // Only what these pinballs win. Rewards claimed before the card you are
+      // on are already in your pocket, so counting them would answer a question
+      // nobody asked: "what will I get" is not "what has the event ever paid".
+      haul: haulSince(haul, state.rung - 1, R.rung),
       // Material is still random once k is known, so this half keeps a band.
       mat: { mean: matMean,
              p10: Math.max(0, matMean - 1.2816 * matSd),
@@ -318,7 +337,11 @@ function renderSummary(r) {
 
   bits.push(`<div class="stat-row">
     <div class="stat"><b>${num(r.sel.rung)}</b><span>of ${LADDER.length} rewards claimed</span>
-      ${wide ? `<i>${r.rung.p10} – ${r.rung.p90} likely</i>` : ''}</div>
+      <i>${[
+        // Says where the haul below starts, now that it counts only new rewards.
+        state.rung > 1 ? `${num(Math.max(0, r.sel.rung - (state.rung - 1)))} new below` : '',
+        wide ? `${r.rung.p10} to ${r.rung.p90} likely` : '',
+      ].filter(Boolean).join(' · ')}</i></div>
     <div class="stat">${wide
       ? `<b class="ranged">${num(r.bulbs.p10)} – ${num(r.bulbs.p90)}</b>`
       : `<b>${num(r.sel.bulbs)}</b>`}
