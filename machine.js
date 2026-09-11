@@ -23,7 +23,32 @@ const MACHINE = {
   pBulb: 0.255,   // chance a launch pays lightbulbs
   perHit: 4,      // lightbulbs when it does, per pinball in the launch
   pMat: 0.22,     // chance a launch pays event material
+
+  /* ---- pinballs that come back from the machine itself ----------------------
+     Hitting certain slots pays pinballs, which are played in turn: a second
+     feedback loop alongside the one the reward track creates. The odds are not
+     measured yet, so this is inert at 0 and nothing below it changes.
+
+     To switch it on, set both: the chance a launch pays pinballs, and how many
+     it pays per ball in the launch. They are exclusive with the two outcomes
+     above, so the three probabilities must stay under 1.
+
+         pPinBack:   0.06,     // 6% of launches pay pinballs
+         perPinBack: 2,        // 2 pinballs per ball launched
+
+     `returnRate()` is then the pinballs each ball played hands back, and the
+     pile it can fund is 1 / (1 - rate) times what you hold, so the rate must
+     stay below 1 or the loop never terminates. Only the average is modelled
+     here; the spread this adds is NOT yet in the solver, so turn it on knowing
+     the ranges under "Show the spread" will read tighter than the truth. */
+  pPinBack: 0,
+  perPinBack: 0,
 };
+
+/* Pinballs returned per pinball played, from the machine's own slots. */
+function returnRate() {
+  return Math.min(0.95, MACHINE.pPinBack * MACHINE.perPinBack);
+}
 
 /* Launch sizes the machine offers. A launch at ×n eats n pinballs and rolls
    ONCE, paying n times the single-ball reward, so the mean is untouched and
@@ -89,8 +114,11 @@ function solveMachine(pins, banked, mult = 1, replay = true) {
   // With replay off there is no loop at all: you fire what you hold, and the
   // pinballs the ladder pays are kept rather than played, so the target never
   // moves and the whole thing is one convolution.
+  // Slot returns fund extra launches: every ball played hands back `returnRate`
+  // of a ball, so the pile stretches by 1/(1-rate). Inert while the rate is 0.
+  const stretch = 1 / (1 - returnRate());
   const target = (k) =>
-    Math.floor((pins + (replay ? ladderReach(bulbsAt(k)).pins : 0)) / m);
+    Math.floor(((pins + (replay ? ladderReach(bulbsAt(k)).pins : 0)) * stretch) / m);
 
   let live = new Map([[0, 1]]);
   const done = new Map();

@@ -192,6 +192,15 @@ const HELP = {
       + 'is an even-chance number: at exactly that many you would get it about half the time, '
       + 'so bring more if you want it for certain.',
 
+  goal: 'Work backwards: say what you want and it fills in the pinballs, then the rest of '
+      + 'the page shows everything else you collect on the way there.\n\n'
+      + 'Pinballs are offered too, and mean the number you get to PLAY rather than a net '
+      + 'gain, since that is what a "use N pinballs" quest counts. ' + TRACK + ' hands some '
+      + 'back, so playing 20,000 costs you fewer than 20,000 of your own.\n\n'
+      + 'Rewards from the track run out at reward 70, so asking for more than it pays says '
+      + 'so instead of inventing a number. Event material has no ceiling: the machine keeps '
+      + 'paying it for as long as you keep playing.',
+
   need: 'The pinballs a typical run needs to reach this reward, counted from where you are '
       + 'now. It already credits the pinballs ' + TRACK + ' hands back along the way, which '
       + 'is why the numbers climb more slowly than the lightbulb costs beside them.\n\n'

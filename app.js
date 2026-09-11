@@ -265,6 +265,60 @@ const PINS_TO_CLEAR = Math.ceil(pinsForRung(LADDER.length, 0) / 100) * 100;
    round number keeps the scale stable, and typing a bigger one still works. */
 const SLIDER_MAX = 50000;
 
+/* ---------- goals: "I want X, what does that cost me?" ------------------------
+
+   Answered by searching for the pinballs that produce it, because the machine
+   and the track pay in different ways and only a search handles both. Track
+   rewards arrive in lumps at fixed rungs and stop for good at reward 70, so
+   they have a ceiling you can ask past; material trickles from every launch and
+   has none. Pinballs are a third case: the goal is the number you get to PLAY,
+   which is what the "use N pinballs" quest counts, not a net gain. */
+
+/* What `pins` of your own would yield, deterministically, from where you are. */
+function yieldOf(pins) {
+  const base = banked();
+  const stretch = 1 / (1 - returnRate());
+  let played = 0, hand = pins * stretch, bulbs = base, paid = 0;
+  for (let i = 0; i < 100 && hand >= 1e-9; i++) {
+    played += hand;
+    bulbs = base + played * MACHINE.pBulb * MACHINE.perHit;
+    const R = ladderReach(bulbs);
+    hand = state.replay ? (R.pins - paid) * stretch : 0;
+    paid = R.pins;
+  }
+  const R = ladderReach(bulbs);
+  return { played, rung: R.rung, bulbs };
+}
+
+/* The amount of one bucket that `pins` would win, counting only what is new. */
+function amountOf(pins, key) {
+  const y = yieldOf(pins);
+  if (key === 'pinball') return y.played;          // total played, not net
+  const haul = haulSince(cumulativeHaul(), state.rung - 1, y.rung)[key];
+  const meta = bucketMeta(key);
+  if (meta.countOnly) return haul.count;
+  const machine = key === 'material'
+    ? y.played * (MACHINE.pMat / (1 - MACHINE.pBulb)) * state.side.per
+    : 0;
+  return haul.qty + machine;
+}
+
+const GOAL_CAP = 500000;   // past any real pile; only used to detect "impossible"
+
+/* -> { pins, rung, possible, ceiling } */
+function goalPins(key, want) {
+  if (!(want > 0)) return { pins: 0, possible: true, rung: state.rung };
+  const ceiling = amountOf(GOAL_CAP, key);
+  if (ceiling < want) return { possible: false, ceiling };
+  let lo = 0, hi = GOAL_CAP;
+  for (let i = 0; i < 44; i++) {
+    const mid = (lo + hi) / 2;
+    if (amountOf(mid, key) >= want) hi = mid; else lo = mid;
+  }
+  const pins = Math.ceil(hi);
+  return { pins, possible: true, rung: yieldOf(pins).rung };
+}
+
 /* ---------- formatting ----------------------------------------------------- */
 
 const num = (n) => Math.round(n).toLocaleString('en-US');
@@ -897,6 +951,35 @@ function init() {
   chart.addEventListener('pointermove', (e) => {
     if (e.buttons) pickFromChart(e);
   });
+
+  /* Goals drive the pinball box rather than replacing the page: solving for the
+     pinballs and feeding them in means the whole results column answers "and
+     what else do I collect on the way" for free. Pinballs are offered too, but
+     as the total you get to PLAY, which is the number the quest counts. */
+  $('goalKey').innerHTML = Object.keys(BUCKETS)
+    .filter((k) => k !== 'unknown')
+    .map((k) => `<option value="${k}">${bucketMeta(k).label}</option>`)
+    .join('');
+
+  const solveGoal = () => {
+    const want = Math.max(0, Math.floor(Number($('goalAmount').value) || 0));
+    const key = $('goalKey').value;
+    const meta = bucketMeta(key);
+    if (!want) { $('goalNote').textContent = ''; return; }
+    const g = goalPins(key, want);
+    if (!g.possible) {
+      $('goalNote').textContent =
+        `Not possible: from here ${TRACK} only pays ${num(g.ceiling)} more `
+        + `${meta.label.toLowerCase()} in total.`;
+      return;
+    }
+    setPins(g.pins);
+    $('goalNote').textContent =
+      `${num(g.pins)} pinballs, reaching reward ${g.rung} of ${LADDER.length}`
+      + (key === 'pinball' ? `, playing ${num(want)} in all` : '');
+  };
+  $('goalAmount').addEventListener('input', solveGoal);
+  $('goalKey').addEventListener('change', solveGoal);
 
   $('multRow').innerHTML = MULTIPLIERS
     .map((m) => `<button data-mult="${m}">×${m}</button>`).join('');

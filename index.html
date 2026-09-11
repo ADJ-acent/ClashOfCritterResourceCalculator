@@ -51,6 +51,19 @@
         <button data-add="5000">+5,000</button>
       </div>
     </section>
+
+    <section>
+      <h2>Or aim for something <button type="button" class="q" data-help="goal" aria-label="What is this?">?</button></h2>
+      <div class="row">
+        <label><span class="sr-label">Amount wanted</span>
+          <input id="goalAmount" type="number" min="0" step="10" value="0" inputmode="numeric" />
+        </label>
+        <label><span class="sr-label">Resource wanted</span>
+          <select id="goalKey"></select>
+        </label>
+      </div>
+      <div class="hint" id="goalNote"></div>
+    </section>
   </div>
 
   <div class="panel controls controls-more">
