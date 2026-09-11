@@ -557,9 +557,16 @@ function renderLadder(r) {
        frontier and read as noise everywhere else; the pinball count means
        something on every row and is the number you would act on. */
     const need = pinsForRung(i + 1);
+    /* The star marks the row in focus. Normally that is the next reward, but
+       after a click it is the reward that was clicked: asking what reward 45
+       costs and being shown a star on 46 reads as the wrong answer, even though
+       46 is genuinely what you would work toward next. The "Next up" panel
+       above still names 46, so nothing is lost. */
+    const isTarget = state.target === i + 1;
     const cls = [
-      i < r.sel.rung ? 'done' : (i + 1 === r.nextIndex ? 'cur' : ''),
-      state.target === i + 1 ? 'target' : '',
+      i < r.sel.rung ? 'done' : '',
+      isTarget || (!state.target && i + 1 === r.nextIndex) ? 'cur' : '',
+      isTarget ? 'target' : '',
     ].filter(Boolean).join(' ');
     rows.push(`<tr class="${cls}" data-n="${i + 1}" title="Click to fill in the pinballs that get you here">
       <td class="n">${i + 1}</td>
