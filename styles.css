@@ -101,6 +101,29 @@ button.danger { color: #ff8a8a; }
 
 .check { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; color: var(--text); }
 
+/* The two ways in. One of them is always the input and the other is always the
+   answer, so this reads as a switch rather than as two buttons. */
+.seg { display: flex; gap: 0; margin-bottom: 14px; }
+.seg button {
+  flex: 1 1 0; border-radius: 0; font-size: 12px; padding: 6px 4px;
+  color: var(--muted); border-color: var(--line);
+}
+.seg button:first-child { border-radius: 6px 0 0 6px; }
+.seg button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+.seg button.sel {
+  background: var(--accent); border-color: var(--accent);
+  color: #1a1a1a; font-weight: 700;
+}
+
+/* The goal chart's axis runs the other way, cheapest and luckiest on the left,
+   so the picks are reordered to sit over the side they name. */
+.dist-picks.flip button:nth-of-type(1) { order: 5; }
+.dist-picks.flip button:nth-of-type(2) { order: 4; }
+.dist-picks.flip button:nth-of-type(3) { order: 3; }
+.dist-picks.flip button:nth-of-type(4) { order: 2; }
+.dist-picks.flip button:nth-of-type(5) { order: 1; }
+.dist-picks.flip .hint { order: 6; }
+
 .mult-row button { min-width: 38px; }
 .mult-row button.sel {
   background: var(--accent); border-color: var(--accent);

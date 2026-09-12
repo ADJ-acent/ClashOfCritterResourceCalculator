@@ -23,7 +23,7 @@
     <h1>Clash of Critters Lightbulb Reward Calculator
       <button type="button" id="wipBadge" title="What is unfinished?">work in progress</button>
     </h1>
-    <p>Tatari Party (also called Mad Invention or Rebuild, the same track under three names) pays out top to bottom. You do not spend lightbulbs. You win them from the pinball machine, and Tatari Party pays pinballs back that you play again. Enter the pinballs you hold and this solves that loop exactly.</p>
+    <p>Tatari Party (also called Mad Invention or Rebuild, the same track under three names) pays out top to bottom. You do not spend lightbulbs. You win them from the pinball machine, and Tatari Party pays pinballs back that you play again. Say what you hold and it works out what that wins, or say what you want and it works out what to bring. Either way it solves that loop exactly.</p>
   </div>
 </header>
 
@@ -35,7 +35,15 @@
        the settings below, instead of sitting under a screenful of controls. -->
   <div class="side">
   <div class="panel controls controls-primary">
-    <section>
+    <!-- One question asked from either end, so only one of the two is ever an
+         input: either you say what you hold and the page says what it wins, or
+         you say what you want and the page says what to bring. -->
+    <div class="seg" id="modeRow" role="group" aria-label="What you are entering">
+      <button type="button" data-mode="have">I have pinballs</button>
+      <button type="button" data-mode="want">I want something</button>
+    </div>
+
+    <section id="haveBox">
       <h2>Pinballs in hand <button type="button" class="q" data-help="pins" aria-label="What is this?">?</button></h2>
       <div class="row">
         <input id="pins" type="number" min="0" step="10" value="0" inputmode="numeric" />
@@ -52,8 +60,8 @@
       </div>
     </section>
 
-    <section>
-      <h2>Or aim for something <button type="button" class="q" data-help="goal" aria-label="What is this?">?</button></h2>
+    <section id="wantBox" hidden>
+      <h2>What you are after <button type="button" class="q" data-help="goal" aria-label="What is this?">?</button></h2>
       <div class="row">
         <label><span class="sr-label">Amount wanted</span>
           <input id="goalAmount" type="number" min="0" step="10" value="0" inputmode="numeric" />
@@ -62,7 +70,7 @@
           <select id="goalKey"></select>
         </label>
       </div>
-      <div class="hint" id="goalNote"></div>
+      <div class="hint" id="goalNote">The pinballs to bring are worked out on the right.</div>
     </section>
   </div>
 
@@ -89,6 +97,11 @@
       <label class="check">
         <input type="checkbox" id="replay" checked />
         <span id="replayLabel"></span>
+      </label>
+      <label class="check" style="margin-top:8px">
+        <input type="checkbox" id="slots" checked />
+        <span>Account for Card Slot and Duel pinballs
+          <button type="button" class="q" data-help="slots" aria-label="What is this?">?</button></span>
       </label>
     </section>
 
@@ -140,7 +153,7 @@
 
     <div id="distBox" class="dist" hidden>
       <div class="dist-head">
-        <h2 class="sec" style="margin:0">How it could land <button type="button" class="q" data-help="dist" aria-label="What is this?">?</button></h2>
+        <h2 class="sec" style="margin:0"><span id="distTitle">How it could land</span> <button type="button" class="q" data-help="dist" aria-label="What is this?">?</button></h2>
         <span id="distLabel" class="muted small"></span>
       </div>
       <div class="dist-chart"></div>

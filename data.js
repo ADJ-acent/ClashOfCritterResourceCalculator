@@ -30,6 +30,11 @@
    Change this line when the name changes. */
 const TRACK = 'Tatari Party';
 
+/* Where to send a correction or a deeper pass. TODO: fill in the Discord invite.
+   Empty until then, and the help text says a link is coming rather than pointing
+   nowhere. */
+const COMMUNITY = '';
+
 const LADDER = [
   /*  1 */ { cost: 80,   res: 'pinball',  qty: 80 },
   /*  2 */ { cost: 70,   res: 'candy' },
@@ -38,7 +43,7 @@ const LADDER = [
   /*  5 */ { cost: 200,  res: 'pinball',  qty: 120 },
   /*  6 */ { cost: 220,  res: 'tatari',   qty: 5 },
   /*  7 */ { cost: 300,  res: 'boost',    qty: 5 },      // x2 for 5 minutes
-  /*  8 */ { cost: 120,  res: 'card',     qty: 2 },      // blue card / 2-card pack
+  /*  8 */ { cost: 120,  res: 'card',     qty: 1 },      // the chart prints 2 cards, which is one pack
   /*  9 */ { cost: 400,  res: 'pinball',  qty: 200 },
   /* 10 */ { cost: 250,  res: 'material', qty: 50 },
   /* 11 */ { cost: 890,  res: 'tatari',   qty: 20 },
@@ -54,7 +59,7 @@ const LADDER = [
   /* 21 */ { cost: 190,  res: 'tatari',   qty: 5 },
   /* 22 */ { cost: 250,  res: 'candy' },
   /* 23 */ { cost: 220,  res: 'tatari',   qty: 5 },
-  /* 24 */ { cost: 250,  res: 'card',     qty: 2 },
+  /* 24 */ { cost: 250,  res: 'card',     qty: 1 },
   /* 25 */ { cost: 220,  res: 'tatari',   qty: 5 },
   /* 26 */ { cost: 250,  res: 'material', qty: 50 },
   /* 27 */ { cost: 1000, res: 'pinball',  qty: 500 },
@@ -77,7 +82,7 @@ const LADDER = [
   /* 44 */ { cost: 580,  res: 'drink',    qty: 200 },
   /* 45 */ { cost: 1310, res: 'tatari',   qty: 25 },
   /* 46 */ { cost: 710,  res: 'pinball',  qty: 300 },
-  /* 47 */ { cost: 290,  res: 'card',     qty: 2 },
+  /* 47 */ { cost: 290,  res: 'card',     qty: 1 },
   /* 48 */ { cost: 260,  res: 'tatari',   qty: 5 },
   /* 49 */ { cost: 580,  res: 'candy' },
   /* 50 */ { cost: 2860, res: 'pinball',  qty: 1000 },
@@ -121,14 +126,15 @@ const SIDE_EVENTS = [
 /* One tile per bucket, in this order. `countOnly` means the payout size is
    never printed, so the tile counts rewards instead of summing units.
    `short` is what a ladder row calls the reward, where the tile's fuller name
-   would read badly ("5 Catch Tatari", not "5 Catch Tatari / Capsules"). */
+   would read badly ("5 Catch Tatari", not "5 Catch Tatari / Capsules"), and
+   `singular` is that name at a quantity of one ("1 Blue Card Pack"). */
 const BUCKETS = {
   pinball:  { label: 'Pinballs',              icon: 'icons/pinball.png' },
   tatari:   { label: 'Catch Tatari / Capsules', short: 'Catch Tatari', icon: 'icons/catch.png' },
   drink:    { label: 'Energy Drinks',         icon: 'icons/drink.png' },
   candy:    { label: 'Candy',                 icon: 'icons/candy.png', countOnly: true, note: 'amount varies' },
   material: { label: 'Material',              icon: null },   // named by the side event
-  card:     { label: 'Blue Card Packs',       short: 'Blue Cards', icon: 'icons/card.png' },
+  card:     { label: 'Blue Card Packs',       singular: 'Blue Card Pack', icon: 'icons/card.png' },
   boost:    { label: 'x2 Multiplier',         icon: 'icons/boost.png', unit: 'min' },
   // Counted, not summed. Rung 41's payout was never recorded, so there is no
   // quantity to add up, only a number of times it was handed out.
@@ -151,14 +157,18 @@ const HELP = {
   pins: 'The pinballs you hold right now. Everything below is what happens if you play '
       + 'them all. You do not spend lightbulbs. The machine pays them out and they move '
       + 'you along ' + TRACK + '.\n\n'
-      + 'Each launch pays one reward and never both: 25.5% of the time it is 4 lightbulbs, '
-      + '22% of the time it is 1 unit of the running side event’s material, and the rest '
-      + 'is everything else the machine drops.',
+      + 'Each launch pays one reward and only one: 25.5% of the time it is 4 lightbulbs, '
+      + '22% of the time it is 1 unit of the running side event’s material, and while Gold '
+      + 'Rush is on it pays energy cans at that same rate. The rest is everything else the '
+      + 'machine drops, some of which is more pinballs, and those get played too.',
 
   replay: TRACK + ' pays pinballs. Left on, those get played too, which wins more '
         + 'lightbulbs, which reaches more rewards. It is a loop. Roughly every 100 pinballs you '
         + 'play come back as 15 more, so your pile stretches about 18% further than it looks. '
         + 'Turn it off to see what you get if you bank them instead.',
+
+  slots: 'The machine pays pinballs out of its own slots as well, and those get played like any others, so your pile goes further than the number you typed.\n\n'
+       + 'It is lumpy: most launches pay none and a few pay a lot, which is why the figures here move when you turn it off. Turn it off to see what the page says without it, or if you would rather not count on it.',
 
   launch: 'The machine can fire several balls at once. A ×100 launch eats 100 balls and rolls '
         + 'ONCE, paying 100 times the single-ball reward. Your average haul is exactly the '
@@ -180,7 +190,12 @@ const HELP = {
 
   dist: 'Luck decides how far your pinballs get you, and this is the shape of it. Tall bars '
       + 'are the outcomes most likely to happen. Click or drag anywhere on it to read the '
-      + 'whole page as that outcome instead: a bad run, a typical one, a lucky one.',
+      + 'whole page as that outcome instead: a bad run, a typical one, a lucky one.\n\n'
+      + 'When you are aiming for something the chart turns around, because so does the '
+      + 'question. It then shows what the goal could TAKE rather than what a pile could give, '
+      + 'measured in pinballs, with the cheap end on the left, since needing fewer of them is '
+      + 'the lucky outcome. Clicking picks which run you are planning for, and the pinballs to '
+      + 'bring follow it.',
 
   next: 'The bar is how far along this reward you would be. The line under it answers "will I '
       + 'actually get it?", two ways depending on how close it is.\n\n'
@@ -188,28 +203,52 @@ const HELP = {
       + 'END with that reward claimed, after playing everything, including the pinballs the '
       + TRACK + ' pays back. It is about where you finish, not where you stand now.\n\n'
       + 'Once the odds fall below 5% a percentage stops being worth reading, so it shows the '
-      + 'shortfall instead: how many more pinballs would put a typical run over the line. That '
-      + 'is an even-chance number: at exactly that many you would get it about half the time, '
-      + 'so bring more if you want it for certain.',
+      + 'shortfall instead: how many more pinballs than you hold it takes. It is the halfway '
+      + 'number, not a promise: bring exactly that many and about half of runs claim the '
+      + 'reward while half fall short, so bring more if you want it for certain.',
 
-  goal: 'Work backwards: say what you want and it fills in the pinballs, then the rest of '
-      + 'the page shows everything else you collect on the way there.\n\n'
+  goal: 'The same question from the other end. Say what you are after and the pinballs to '
+      + 'bring are worked out and shown on the right, with the rest of the page describing '
+      + 'that run, so you also see everything else you collect on the way there.\n\n'
+      + 'It is a chance, not a price. The figure is what gets you there on an average run, '
+      + 'which is another way of saying half of runs fall short of it. Turn on “Show the '
+      + 'spread” and it also gives you the number that gets there 90% of the time, and the '
+      + 'one a lucky run can manage.\n\n'
       + 'Pinballs are offered too, and mean the number you get to PLAY rather than a net '
       + 'gain, since that is what a "use N pinballs" quest counts. ' + TRACK + ' hands some '
       + 'back, so playing 20,000 costs you fewer than 20,000 of your own.\n\n'
-      + 'Rewards from the track run out at reward 70, so asking for more than it pays says '
-      + 'so instead of inventing a number. Event material has no ceiling: the machine keeps '
-      + 'paying it for as long as you keep playing.',
+      + 'Rewards from the track run out at reward ' + LADDER.length + ', so asking for more '
+      + 'than it pays cannot be done. Rather than inventing a number it tells you the most '
+      + 'there is and shows you what claiming all of that takes. Event material has no '
+      + 'ceiling: the machine keeps paying it for as long as you keep playing, and energy '
+      + 'cans have none either while Gold Rush is running.',
+
+  /* TODO: the Discord invite. The link is not settled yet, so the text says to
+     come and tell us without saying where, which is half an ask. Put the URL in
+     `COMMUNITY` below and the sentence finishes itself. */
+  end: 'The track does not stop at reward ' + LADDER.length + '. It carries on, and nobody has '
+       + 'recorded how far: these ' + LADDER.length + ' are simply as deep as anyone has been on a '
+       + 'pass that was written down. So treat the end of this list as the end of what is '
+       + 'KNOWN, not the end of the event.\n\n'
+     + 'One reward inside the list is missing too: reward 41 costs its 290 lightbulbs and '
+       + 'nobody wrote down what it pays, so it is counted rather than added up. Every total '
+       + 'after it is still right, because the cost is what moves you along.\n\n'
+     + 'If you have been further than reward ' + LADDER.length + ', or you know what 41 pays, '
+       + 'that is the missing piece and it would be very welcome. '
+     + (COMMUNITY ? 'Come and tell us: ' + COMMUNITY : 'A link to where to send it is coming.'),
 
   need: 'The pinballs a typical run needs to reach this reward, counted from where you are '
       + 'now. It already credits the pinballs ' + TRACK + ' hands back along the way, which '
       + 'is why the numbers climb more slowly than the lightbulb costs beside them.\n\n'
       + 'A tick means you have enough already. Click any row to fill that number in.',
 
-  material: 'Most of your material comes from the machine, not ' + TRACK + '. The track '
-          + 'pays a few big chunks, while 22% of every launch pays material directly. The '
-          + 'machine half is a range because it stays down to luck even after the lightbulbs '
-          + 'are settled.',
+  machine: 'Most of this comes from the machine, not ' + TRACK + '. The track pays a few '
+         + 'big chunks of it, while the machine pays it out of launches that missed the '
+         + 'lightbulbs, which is the bulk of them. That is why the row is split: the track '
+         + 'half is fixed once you know how far you get, and the machine half is a range, '
+         + 'because it stays down to luck even after the lightbulbs are settled.\n\n'
+         + 'Energy cans work this way only while Gold Rush is running. Without it the machine '
+         + 'pays none, and the ' + TRACK + ' rungs that would have paid cans pay candy.',
 };
 
 /* What the source chart could not settle. Kept for us, not shown on the page:
@@ -219,6 +258,7 @@ const DATA_NOTES = [
   'Material rungs are stored in base units and converted for the running side event: 1 board = 1 rod = 1 pickaxe = 2 fertiliser = 200 zobo coins. The three recordings of the chart agree exactly under those rates.',
   'Rung 13 (130 bulbs) was recorded as candy on two passes and as 55 cans on a third, the mark of a drink rung read with and without Gold Rush running. It is treated as a drink rung.',
   'Rung 41 (290 bulbs) has no reward recorded at all. It still costs its 290, so every total after it stays correct.',
+  'The card rungs are printed on the chart as 2 blue cards, which is one 2-card pack. The ladder stores packs, so each of those rungs is 1.',
   'Candy amounts are rolled rather than printed, so candy is counted as a number of rewards, never a number of units.',
-  'The ladder is 70 rungs as recorded from the deepest pass. Whether it ends there or carries on is unknown.',
+  'The ladder is 70 rungs as recorded from the deepest pass. It does NOT end there: the track carries on, and how far is unknown.',
 ];

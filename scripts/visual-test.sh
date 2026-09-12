@@ -10,6 +10,7 @@
 #   bash scripts/visual-test.sh                 # default size spread
 #   bash scripts/visual-test.sh 1280x720 1920x1080   # only these sizes
 #   BROWSER="/path/to/chrome" bash scripts/visual-test.sh   # force a browser
+#   QUERY="?i=g&ga=5000" bash scripts/visual-test.sh   # start in a given state
 #
 set -euo pipefail
 
@@ -47,9 +48,9 @@ fi
 
 # --- file:// URL to the app (handle Windows paths via cygpath) ---------------
 if command -v cygpath >/dev/null 2>&1; then
-  URL="file:///$(cygpath -m "$PWD/index.html")"
+  URL="file:///$(cygpath -m "$PWD/index.html")${QUERY:-}"
 else
-  URL="file://$PWD/index.html"
+  URL="file://$PWD/index.html${QUERY:-}"
 fi
 
 # Chromium on Windows only honours absolute, native paths for --screenshot and
