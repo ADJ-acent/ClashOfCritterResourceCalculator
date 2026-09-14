@@ -358,6 +358,22 @@ stores a step behind until the next click. Calling it from the one place every
 change already passes through also means the restored state is in the address
 bar on arrival, instead of the bar reading blank until you touch something.
 
+**Visits are counted by GoatCounter**, which needs no cookies and no consent
+banner. The dashboard at https://adjacent.goatcounter.com/ is shared with the
+Treasure Hunt solver and tells the two apart by path. GoatCounter files a visit
+under the path plus the query, and here the query is the whole state, from a
+shared link or written by `save()` on arrival, so left alone nearly every visit
+would be a row of its own. The `<link rel="canonical">` in `index.html` is what
+stops that: GoatCounter takes its path instead, and search engines hear the same
+thing, that every state is one page.
+
+It skips `file:` and `localhost`, so opening the file and `visual-test.sh` are
+never counted. To leave your own browser out, visit with `#toggle-goatcounter`,
+but do it on the Treasure Hunt solver: `save()` rewrites the address without the
+hash, usually before the counter has loaded, so the toggle is unreliable here.
+The flag lives in `localStorage` on `adj-acent.github.io`, which both tools
+share, so setting it once covers both.
+
 ## Files
 
 | File | What it holds |

@@ -8,6 +8,11 @@
 <meta name="description" content="Free Clash of Critters calculator for the Tatari Party / Mad Invention / Rebuild lightbulb track: enter the pinballs you hold and see exactly what they turn into, or work backwards from the resource you want." />
 <meta name="theme-color" content="#15171c" />
 
+<!-- One address for every state the page can be in. The URL carries the whole
+     state (?e=...&p=...), so without this each shared link would be a separate
+     page to a search engine and a separate row in the visitor counter below. -->
+<link rel="canonical" href="https://adj-acent.github.io/ClashOfCritterResourceCalculator/" />
+
 <!-- Open Graph (link previews on Discord, Reddit, forums, etc.) -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Clash of Critters Resource Calculator" />
@@ -209,5 +214,13 @@
 <script src="data.js"></script>
 <script src="machine.js"></script>
 <script src="app.js"></script>
+
+<!-- Visitor analytics: GoatCounter. Privacy-friendly, no cookies, no consent banner.
+     Dashboard: https://adjacent.goatcounter.com/ (shared with the Treasure Hunt
+     solver, told apart by path). It counts the canonical path above, not the
+     address bar. https rather than protocol-relative, which from a local file
+     would resolve to a network share. -->
+<script data-goatcounter="https://adjacent.goatcounter.com/count"
+        async src="https://gc.zgo.at/count.js"></script>
 </body>
 </html>
