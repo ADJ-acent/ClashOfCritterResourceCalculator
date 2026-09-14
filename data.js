@@ -71,41 +71,64 @@ const LADDER = [
   /* 33 */ { cost: 240,  res: 'drink',    qty: 100 },
   /* 34 */ { cost: 1120, res: 'tatari',   qty: 25 },
   /* 35 */ { cost: 240,  res: 'pinball',  qty: 120 },
-  /* 36 */ { cost: 290,  res: 'candy' },
-  /* 37 */ { cost: 290,  res: 'material', qty: 50 },
-  /* 38 */ { cost: 260,  res: 'tatari',   qty: 5 },
-  /* 39 */ { cost: 290,  res: 'candy' },
-  /* 40 */ { cost: 530,  res: 'tatari',   qty: 10 },
-  /* 41 */ { cost: 290,  res: 'unknown',  qty: null, note: 'This rung costs 290 but its reward was never written down.' },
-  /* 42 */ { cost: 1310, res: 'tatari',   qty: 25 },
-  /* 43 */ { cost: 710,  res: 'pinball',  qty: 300 },
-  /* 44 */ { cost: 580,  res: 'drink',    qty: 200 },
-  /* 45 */ { cost: 1310, res: 'tatari',   qty: 25 },
-  /* 46 */ { cost: 710,  res: 'pinball',  qty: 300 },
-  /* 47 */ { cost: 290,  res: 'card',     qty: 1 },
-  /* 48 */ { cost: 260,  res: 'tatari',   qty: 5 },
-  /* 49 */ { cost: 580,  res: 'candy' },
-  /* 50 */ { cost: 2860, res: 'pinball',  qty: 1000 },
-  /* 51 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 52 */ { cost: 350,  res: 'material', qty: 50 },
-  /* 53 */ { cost: 400,  res: 'pinball',  qty: 140 },
-  /* 54 */ { cost: 700,  res: 'candy' },
-  /* 55 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 56 */ { cost: 860,  res: 'pinball',  qty: 300 },
-  /* 57 */ { cost: 700,  res: 'drink',    qty: 200 },
-  /* 58 */ { cost: 1910, res: 'tatari',   qty: 30 },   // recorded as "30 Capsules", same item
-  /* 59 */ { cost: 1370, res: 'pinball',  qty: 480 },
-  /* 60 */ { cost: 540,  res: 'tatari',   qty: 10 },
-  /* 61 */ { cost: 350,  res: 'candy' },
-  /* 62 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 63 */ { cost: 760,  res: 'candy' },
-  /* 64 */ { cost: 640,  res: 'tatari',   qty: 10 },
-  /* 65 */ { cost: 1710, res: 'pinball',  qty: 600 },
-  /* 66 */ { cost: 630,  res: 'drink',    qty: 180 },
-  /* 67 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 68 */ { cost: 1290, res: 'pinball',  qty: 450 },
-  /* 69 */ { cost: 700,  res: 'material', qty: 100 },
-  /* 70 */ { cost: 960,  res: 'tatari',   qty: 15 },
+  /* 36 */ { cost: 290,  res: 'material', qty: 50 },
+  /* 37 */ { cost: 260,  res: 'tatari',   qty: 5 },
+  /* 38 */ { cost: 290,  res: 'candy' },
+  /* 39 */ { cost: 530,  res: 'tatari',   qty: 10 },
+  /* 40 */ { cost: 290,  res: 'candy' },      // once recorded blank, see DATA_NOTES
+  /* 41 */ { cost: 1310, res: 'tatari',   qty: 25 },
+  /* 42 */ { cost: 710,  res: 'pinball',  qty: 300 },
+  /* 43 */ { cost: 580,  res: 'drink',    qty: 200 },
+  /* 44 */ { cost: 1310, res: 'tatari',   qty: 25 },
+  /* 45 */ { cost: 710,  res: 'pinball',  qty: 300 },
+  /* 46 */ { cost: 290,  res: 'card',     qty: 1 },
+  /* 47 */ { cost: 260,  res: 'tatari',   qty: 5 },
+  /* 48 */ { cost: 580,  res: 'candy' },
+  /* 49 */ { cost: 2860, res: 'pinball',  qty: 1000 },
+  /* 50 */ { cost: 320,  res: 'tatari',   qty: 5 },
+  /* 51 */ { cost: 350,  res: 'material', qty: 50 },
+  /* 52 */ { cost: 400,  res: 'pinball',  qty: 140 },
+  /* 53 */ { cost: 700,  res: 'candy' },
+  /* 54 */ { cost: 320,  res: 'tatari',   qty: 5 },
+  /* 55 */ { cost: 860,  res: 'pinball',  qty: 300 },
+  /* 56 */ { cost: 700,  res: 'drink',    qty: 200 },
+  /* 57 */ { cost: 1910, res: 'tatari',   qty: 30 },   // recorded as "30 Capsules", same item
+  /* 58 */ { cost: 1370, res: 'pinball',  qty: 480 },
+  /* 59 */ { cost: 540,  res: 'tatari',   qty: 10 },
+  /* 60 */ { cost: 350,  res: 'candy' },
+  /* 61 */ { cost: 320,  res: 'tatari',   qty: 5 },
+  /* 62 */ { cost: 760,  res: 'candy' },
+  /* 63 */ { cost: 640,  res: 'tatari',   qty: 10 },
+  /* 64 */ { cost: 1710, res: 'pinball',  qty: 600 },
+  /* 65 */ { cost: 630,  res: 'drink',    qty: 180 },
+  /* 66 */ { cost: 320,  res: 'tatari',   qty: 5 },
+  /* 67 */ { cost: 1290, res: 'pinball',  qty: 450 },
+  /* 68 */ { cost: 700,  res: 'material', qty: 100 },
+  /* 69 */ { cost: 960,  res: 'tatari',   qty: 15 },
+];
+
+/* Rows known to exist past the recorded ladder, with no cost on record. The track
+   runs to at least row 81, which pays 1,100 pinballs, but nobody wrote down the
+   lightbulbs anywhere from 70 to 81. A reward with no cost cannot be placed on
+   the walk, because every threshold the solver uses is a running total of costs,
+   so none of these feed a total and none of them can be reached. They are shown
+   so the page stops implying the track ends at 70.
+
+   To confirm one, give it its cost and move it to the end of LADDER. Only the
+   first of them can move, since each cost is counted from the one before. */
+const BEYOND = [
+  /* 70 */ { cost: null, res: 'unknown', qty: null },
+  /* 71 */ { cost: null, res: 'unknown', qty: null },
+  /* 72 */ { cost: null, res: 'unknown', qty: null },
+  /* 73 */ { cost: null, res: 'unknown', qty: null },
+  /* 74 */ { cost: null, res: 'unknown', qty: null },
+  /* 75 */ { cost: null, res: 'unknown', qty: null },
+  /* 76 */ { cost: null, res: 'unknown', qty: null },
+  /* 77 */ { cost: null, res: 'unknown', qty: null },
+  /* 78 */ { cost: null, res: 'unknown', qty: null },
+  /* 79 */ { cost: null, res: 'unknown', qty: null },
+  /* 80 */ { cost: null, res: 'unknown', qty: null },
+  /* 81 */ { cost: null, res: 'pinball',  qty: 1100 },
 ];
 
 /* The side events, and what a material rung pays in each.
@@ -136,8 +159,10 @@ const BUCKETS = {
   material: { label: 'Material',              icon: null },   // named by the side event
   card:     { label: 'Blue Card Packs',       singular: 'Blue Card Pack', icon: 'icons/card.png' },
   boost:    { label: 'x2 Multiplier',         icon: 'icons/boost.png', unit: 'min' },
-  // Counted, not summed. Rung 41's payout was never recorded, so there is no
-  // quantity to add up, only a number of times it was handed out.
+  // Counted, not summed, for any rung whose payout was never recorded. There is
+  // none in LADDER now that the blank at 290 turned out to be candy, but the tile
+  // stays: it carries the "?" about the rows past the ladder, whose rewards are
+  // unconfirmed along with their costs.
   unknown:  { label: 'Unconfirmed',           icon: null, countOnly: true,
               note: 'reward never recorded' },
 };
@@ -217,7 +242,7 @@ const HELP = {
       + 'Pinballs are offered too, and mean the number you get to PLAY rather than a net '
       + 'gain, since that is what a "use N pinballs" quest counts. ' + TRACK + ' hands some '
       + 'back, so playing 20,000 costs you fewer than 20,000 of your own.\n\n'
-      + 'Rewards from the track run out at reward ' + LADDER.length + ', so asking for more '
+      + 'Rewards from the track run out where the list of confirmed ones does, so asking for more '
       + 'than it pays cannot be done. Rather than inventing a number it tells you the most '
       + 'there is and shows you what claiming all of that takes. Event material has no '
       + 'ceiling: the machine keeps paying it for as long as you keep playing, and energy '
@@ -226,15 +251,17 @@ const HELP = {
   /* TODO: the Discord invite. The link is not settled yet, so the text says to
      come and tell us without saying where, which is half an ask. Put the URL in
      `COMMUNITY` below and the sentence finishes itself. */
-  end: 'The track does not stop at reward ' + LADDER.length + '. It carries on, and nobody has '
-       + 'recorded how far: these ' + LADDER.length + ' are simply as deep as anyone has been on a '
-       + 'pass that was written down. So treat the end of this list as the end of what is '
-       + 'KNOWN, not the end of the event.\n\n'
-     + 'One reward inside the list is missing too: reward 41 costs its 290 lightbulbs and '
-       + 'nobody wrote down what it pays, so it is counted rather than added up. Every total '
-       + 'after it is still right, because the cost is what moves you along.\n\n'
-     + 'If you have been further than reward ' + LADDER.length + ', or you know what 41 pays, '
-       + 'that is the missing piece and it would be very welcome. '
+  end: 'The track does not stop where this list does. At least ' + BEYOND.length + ' more '
+       + 'rewards come after it, and the furthest anyone has seen pays '
+       + BEYOND[BEYOND.length - 1].qty.toLocaleString('en-US') + ' pinballs, but nobody wrote '
+       + 'down what any of them cost. Every figure here is worked out from running totals of '
+       + 'costs, so a reward with no cost has no place in them: those are listed at the '
+       + 'bottom of the rewards, marked unconfirmed, and nothing on the page counts them.\n\n'
+     + 'So the end of the list is the end of what is KNOWN, not the end of the event. A run '
+       + 'that clears it keeps winning lightbulbs, and they go toward rewards nobody has '
+       + 'costed.\n\n'
+     + 'If you know what any of those later rewards cost, that is the missing piece and it '
+       + 'would be very welcome. '
      + (COMMUNITY ? 'Come and tell us: ' + COMMUNITY : 'A link to where to send it is coming.'),
 
   need: 'The pinballs a typical run needs to reach this reward, counted from where you are '
@@ -257,8 +284,8 @@ const HELP = {
 const DATA_NOTES = [
   'Material rungs are stored in base units and converted for the running side event: 1 board = 1 rod = 1 pickaxe = 2 fertiliser = 200 zobo coins. The three recordings of the chart agree exactly under those rates.',
   'Rung 13 (130 bulbs) was recorded as candy on two passes and as 55 cans on a third, the mark of a drink rung read with and without Gold Rush running. It is treated as a drink rung.',
-  'Rung 41 (290 bulbs) has no reward recorded at all. It still costs its 290, so every total after it stays correct.',
+  'An earlier transcription had a candy at 290 as reward 36. That reward does not exist. The candy belongs to the 290 rung after 10 Catch Tatari, now reward 40, which had been recorded as blank. Every reward from 36 on is one lower than in older links and screenshots.',
   'The card rungs are printed on the chart as 2 blue cards, which is one 2-card pack. The ladder stores packs, so each of those rungs is 1.',
   'Candy amounts are rolled rather than printed, so candy is counted as a number of rewards, never a number of units.',
-  'The ladder is 70 rungs as recorded from the deepest pass. It does NOT end there: the track carries on, and how far is unknown.',
+  'The ladder is 69 costed rungs. The track runs to at least row 81, which pays 1,100 pinballs, but no cost was recorded for any row from 70 to 81, so those are listed in BEYOND and feed no total.',
 ];

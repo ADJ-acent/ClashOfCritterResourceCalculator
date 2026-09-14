@@ -125,19 +125,19 @@ Validated against a 4,000-run Monte Carlo, medians agree to the unit
 ### Numbers worth knowing
 
 * 1 pinball = **1.02 lightbulbs** on average.
-* Two things hand pinballs back. The ladder returns 0.153 per pinball played, and
+* Two things hand pinballs back. The ladder returns 0.154 per pinball played, and
   the machine's own slots return about 0.05 more while Gold Rush is running, or
   about 0.09 while it is not, since one of those slots spends part of its share
   on energy cans during Gold Rush. Together that is a **×1.26 multiplier** on
   your pile with Gold Rush on, **×1.32** with it off.
-* Clearing all 70 rungs takes about **28,700 of your own pinballs** during Gold
-  Rush, or **27,300** without it, but that is the *average*, which finishes only
-  about half the time. Being sure of it (99.9%) takes ~29,700 at ×1 and ~45,600
+* Clearing all 69 confirmed rungs takes about **28,400 of your own pinballs** during Gold
+  Rush, or **27,100** without it, but that is the *average*, which finishes only
+  about half the time. Being sure of it (99.9%) takes ~29,500 at ×1 and ~44,700
   at ×200, since a bigger launch is a wider swing. Without the machine's own
-  payback counted it is 30,600. The slider is capped at a flat 50,000 rather than at a derived
+  payback counted it is 30,300. The slider is capped at a flat 50,000 rather than at a derived
   figure: the derived one moves with the launch size and replay setting, which
   would shift the scale under the handle. Typing a larger number still works.
-* Event material is dominated by the machine, not the ladder: ~7,950 units vs
+* Event material is dominated by the machine, not the ladder: ~7,900 units vs
   340 over a full clear. During Gold Rush **energy cans work the same way** and
   at the same rate, which turns them from a few hundred off the track into
   thousands.
@@ -158,7 +158,7 @@ controls in the sidebar:
   instead, so less comes back.
 
 Clicking any ladder row fills in the pinballs that get you there. Note it often
-carries you *past* that rung: reaching rung 50 hands you 1,000 pinballs, which
+carries you *past* that rung: reaching rung 49 hands you 1,000 pinballs, which
 is worth two more rungs on its own.
 
 ### Working backwards from a goal
@@ -221,9 +221,11 @@ fast path is no path, because ×100 is exactly where a range earns its space.
 The three kinds of resource still behave differently:
 
 * **Track rewards** (Catch Tatari, drinks, card packs, x2, candy) arrive in lumps
-  at fixed rungs and stop for good at reward 70, so they have a **ceiling**.
+  at fixed rungs, and the costed ones stop at reward 69, so they have a
+  **ceiling**, worded as a ceiling of what is recorded rather than a final one.
   Asking past it is answered rather than refused: ask for 300 Catch Tatari and
-  the page says the track has only 240 left, then solves for those 240 and shows
+  the page says the recorded rewards have only 240 left, then solves for those
+  240 and shows
   that run, saying in the tile that the figure is "for all 240, which is every
   one left". A bare "not possible" would leave the rest of the page describing
   whatever pinballs happened to be in the box, which answers no question at all.
@@ -305,19 +307,30 @@ on, not a running total. So position is entered as the card: its **cost**, then
 **which reward it is**, and the banked total is derived (every earlier rung, plus
 whatever is already showing on the card).
 
-Cost alone is not enough, 30 of the 70 rungs share a cost with another rung, and
-even cost + reward leaves 9 ambiguous groups (a *220 → 5 Catch Tatari* card
-occurs six times). Adding the **next** reward, which is also on screen, cuts that
-to a single pair: rungs 42 and 45 are identical for two rungs running. So the
-picker labels each option `this reward, then that one` and says so when it cannot
-tell those two apart.
+Cost alone is not enough: 29 of the 69 rewards repeat a cost an earlier one
+already has, and even cost + reward leaves 9 ambiguous groups (a *220 → 5 Catch
+Tatari* card occurs six times). Adding the **next** reward, which is also on
+screen, cuts that to two pairs that stay identical however you look at them, with
+Gold Rush on: *260 → 5 Catch Tatari, then Candy* occurs twice, ten rewards apart,
+and *1,310 → 25 Catch Tatari, then 300 Pinballs* twice, three apart. This used to
+say a single pair. There were three all along, and the third went when the
+phantom reward 36 came out. So the picker labels each option `this reward, then
+that one`, marks the two halves of a pair *earlier* and *later*, and says when it
+is guessing.
+
+**None of that puts a row number on screen.** The game never shows one, so the
+page names a reward by what it costs and pays, and the ladder's `#` column is the
+only place a row number appears. Counts are fine, "38 rewards claimed" is
+something a player watches tick up, but "reward 38 of 69" is an index into a list
+they cannot see.
 
 ### Where the state lives
 
 Written together by `save()`: the URL
-(`?e=marathon&g=1&p=5000&r=23&w=100&m=10&y=1&s=0&i=p&ga=0&gk=pinball`, event,
-gold rush, pinballs, rung, progress into it, launch size, replay, spread, input
-mode, goal) so a result is linkable, and `localStorage` so the page comes back
+(`?e=marathon&g=1&p=5000&r=23&w=100&m=10&y=1&s=0&b=1&i=g&ga=5000&gk=material`:
+event, gold rush, pinballs, rung, progress into it, launch size, replay, spread,
+the machine's own payback, input mode, and the goal, which is left off while
+there is none) so a result is linkable, and `localStorage` so the page comes back
 where you left it. A link wins over what the browser remembers, and only when it
 carries that field.
 
@@ -349,7 +362,7 @@ bar on arrival, instead of the bar reading blank until you touch something.
 
 | File | What it holds |
 | --- | --- |
-| `data.js` | The ladder, the buckets, the side events and their rates, the data caveats. **This is the file to edit when you correct or extend the chart.** |
+| `data.js` | The ladder, the unconfirmed rows past it (`BEYOND`), the buckets, the side events and their rates, the data caveats. **This is the file to edit when you correct or extend the chart.** |
 | `machine.js` | The solver for the pinball → lightbulb → pinball loop, exact but for the mixture over the machine's own payback, and the machine's odds. |
 | `app.js` | The walk, the formatting, the rendering. No framework. |
 | `styles.css` | Palette and shell shared with the Treasure Hunt solver. |
@@ -389,8 +402,8 @@ counted again.
 
 Which is why a 0 says *why* it is 0 (`emptyReason()` in `app.js`). "None yet"
 promises that more pinballs would fix it, and for two buckets that is false:
-every card-pack and x2 rung sits in the first 47, so from reward 48 on no pile
-of pinballs brings one back and the tile reads **all 3 already claimed**
+every card-pack and x2 rung sits in the first 46, so from reward 47 on no pile
+of pinballs brings one back and the tile reads **all 3 recorded ones claimed**
 instead. Drinks with Gold Rush off read **only while Gold Rush is on**, since
 those rungs are paying candy.
 
@@ -425,13 +438,39 @@ whichever yields more.
 
 ## Known gaps
 
-* Rung 41 (290) has no reward recorded, the cost is right, the payout is blank.
+* **Reward 36 was a transcription error.** An earlier recording had a candy at
+  290 there; that reward does not exist. The candy belongs to the 290 rung after
+  10 Catch Tatari, now reward 40, which had been recorded blank, so nothing on
+  the confirmed ladder is unrecorded any more. Every reward from 36 on is one
+  lower than in older links and screenshots, and a shared link's `r=` points
+  one reward later than it used to.
 * Candy amounts are never printed, by design of the event.
-* **The track does not end at reward 70.** It carries on and nobody has recorded
-  how far, so 70 is the deepest pass anyone wrote down rather than the end of the
-  event. The page says so where it matters: the end-of-track panel reads "all 70
-  recorded rewards claimed, the track goes on, we do not know how far", and the
-  `?` beside it and beside the Unconfirmed tile asks for a deeper pass.
+* **The track runs to at least reward 81, and rewards 70 to 81 have no costs.**
+  Row 81 pays 1,100 pinballs; what 70 to 80 pay is unknown too. Every threshold
+  the solver uses is a running total of costs, so a reward with no cost cannot
+  be placed on the walk at all. They live in `BEYOND` in `data.js`, are drawn
+  under the ladder as unconfirmed rows set off by a dashed rule, cannot be
+  clicked, and feed no total. To confirm one, give it its cost and move it to the
+  end of `LADDER`; only the first can move, since each cost is counted from the
+  one before it.
+
+  Everything that used to call the last costed reward the end now says "recorded" or "confirmed"
+  instead: the end-of-track panel ("all 69 confirmed rewards claimed, 12 more
+  known, costs unrecorded"), the ladder footer, a zero tile ("all 3 recorded ones
+  claimed"), and an unreachable goal ("out of reach as far as anyone knows"). The
+  `?` beside the end panel and beside the Unconfirmed tile explains it and asks
+  for the missing costs.
+
+  One thing it cannot fix yet: a player **past** reward 69 has no way to say so.
+  "Where you are now" matches the cost on your card, and a 70 to 81 card has no
+  cost to match, or worse, shares one with an earlier reward and gets placed
+  there. The picker's "this reward, then that one" labels will not match the
+  screen, which is the tell.
+
+  **Open question:** `BEYOND` assumes the 1,100-pinball reward is the game's row
+  81, so the unconfirmed run starts at 70 and is 12 long. If that 81 was counted
+  from this page before reward 36 came out, it is row 80 and there are 11: drop
+  one of the unrecorded entries from `BEYOND`.
   **TODO: the Discord invite.** `COMMUNITY` in `data.js` is empty, and until it
   is filled in that help text says a link is coming rather than pointing nowhere.
 * Rung 13 is inferred to be a drink rung (recorded as candy twice, as 55 cans
@@ -450,4 +489,5 @@ No build step, open `index.html`. For layout checks:
 
 ```sh
 bash scripts/visual-test.sh 1440x900 500x900
+QUERY='?i=g&ga=5000&gk=material&s=1' bash scripts/visual-test.sh 1280x950   # start in a given state
 ```

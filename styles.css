@@ -345,6 +345,13 @@ table#ladder { width: 100%; border-collapse: collapse; font-size: 13px; table-la
 #ladder tr.cur .rw { color: var(--accent); font-weight: 600; }
 #ladder tr.cur .n::after { content: " ★"; color: var(--accent); }
 #ladder tr.assumed .rw { font-style: italic; }
+/* Rows known to exist past the recorded ladder, with no cost to place them on
+   it. Not clickable, since there is nothing to solve for, and set off from the
+   confirmed rows by a dashed rule where the knowledge stops. */
+#ladder tr.unconfirmed { cursor: default; }
+#ladder tr.unconfirmed td { color: var(--muted); font-style: italic; }
+#ladder tr.unconfirmed:hover td { background: transparent; }
+#ladder tr.unconfirmed.first td { border-top: 2px dashed var(--line); }
 .flag {
   display: inline-block; min-width: 15px; text-align: center;
   border: 1px solid var(--line); border-radius: 4px;

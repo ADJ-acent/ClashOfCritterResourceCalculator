@@ -339,7 +339,7 @@ function pinsForRung(n, base = banked()) {
   /* Credit only the rewards PASSED ON THE WAY, never reward n itself. Its own
      pinballs arrive for reaching it, so counting them is borrowing against a
      payout you have not had: reward 1 costs 78 balls and pays 80, which made it
-     look free. Wrong for all 18 pinball-paying rewards, worst at reward 50. */
+     look free. Wrong for all 18 pinball-paying rewards, worst at reward 49. */
   const earned = n > 1 ? CUM_PINS[n - 2] : 0;
   const credit = state.replay ? Math.max(0, earned - ladderReach(base).pins) : 0;
   const balls = (want - base) / (MACHINE.pBulb * MACHINE.perHit);
@@ -367,7 +367,7 @@ const SLIDER_MAX = 50000;
 
    Answered by searching for the pinballs that produce it, because the machine
    and the track pay in different ways and only a search handles both. Track
-   rewards arrive in lumps at fixed rungs and stop for good at reward 70, so
+   rewards arrive in lumps at fixed rungs and stop at the last costed one, so
    they have a ceiling you can ask past; material trickles from every launch and
    has none. Pinballs are a third case: the goal is the number you get to PLAY,
    which is what the "use N pinballs" quest counts, not a net gain. */
@@ -738,7 +738,7 @@ function renderSummary(r) {
     tiles.push(`<div class="stat"><b>${num(state.pins)}</b>
       <span>pinballs to start${Math.abs(state.pctl - 0.5) <= 0.02 ? ', on average' : ''}</span>
       <i>${[// Says which number is being answered when it is not the one asked.
-            goal.possible ? '' : `for all ${num(goal.ceiling)}, which is every one left`,
+            goal.possible ? '' : `for all ${num(goal.ceiling)}, every one recorded`,
             wide && goal.sure > goal.pins ? `${num(goal.sure)} to be 90% sure` : '',
             wide && goal.lucky < goal.pins ? `${num(goal.lucky)} if you are lucky` : '']
            // A line each: the tile is too narrow to keep them on one, and a
@@ -746,7 +746,7 @@ function renderSummary(r) {
            .filter(Boolean).join('<br />')}</i></div>`);
   }
 
-  tiles.push(`<div class="stat"><b>${num(r.sel.rung)}</b><span>of ${LADDER.length} rewards claimed</span>
+  tiles.push(`<div class="stat"><b>${num(r.sel.rung)}</b><span>rewards claimed</span>
       <i>${[
         // Says where the haul below starts, now that it counts only new rewards.
         state.rung > 1 ? `${num(Math.max(0, r.sel.rung - (state.rung - 1)))} new below` : '',
@@ -783,7 +783,6 @@ function renderSummary(r) {
     bits.push(`<div class="next">
       <div class="next-head">
         <span>Next up: <b>${rewardText(r.next)}</b>
-          <span class="muted">(reward ${r.nextIndex} of ${LADDER.length})</span>
           <button type="button" class="q" data-help="next" aria-label="What is this?">?</button></span>
         <span class="muted">${num(r.next.cost - r.left)} more lightbulbs</span>
       </div>
@@ -804,9 +803,9 @@ function renderSummary(r) {
     const pAll = r.pReach(LADDER.length);
     bits.push(`<div class="next">
       <div class="next-head">
-        <span>All ${LADDER.length} recorded rewards claimed
+        <span>All ${LADDER.length} confirmed rewards claimed
           <button type="button" class="q" data-help="end" aria-label="What is this?">?</button></span>
-        <span class="muted">the track goes on, we do not know how far</span>
+        <span class="muted">${BEYOND.length} more known, costs unrecorded</span>
       </div>
       <div class="bar"><i style="width:100%"></i></div>
       <div class="muted small">${num(LADDER_TOTAL)} / ${num(LADDER_TOTAL)}${
@@ -976,19 +975,27 @@ function renderDist(r) {
 }
 
 /* Why a tile reads 0. "none yet" promises that more pinballs would fix it, and
-   for the card packs and the x2 boost that is a lie: every rung paying those
-   sits in the first 47, so past that point no pile of pinballs brings one back,
-   and a row that keeps saying "none yet" reads as a bug rather than an answer.
-   Counted from the card you are on, since everything before it is claimed. */
+   for the card packs and the x2 boost that is a lie: every recorded rung paying
+   those sits in the first 46, so past that point no pile of pinballs brings one
+   back from the rewards anyone has costed, and a row that keeps saying "none
+   yet" reads as a bug rather than an answer. "Recorded" is doing real work in
+   the wording: the rewards past the ladder have no costs on record, so whether
+   they pay one is simply not known. Counted from the card you are on, since
+   everything before it is claimed. */
 function emptyReason(key) {
   if (key === 'drink' && !state.goldRush) return 'only while Gold Rush is on';
+  // Nothing recorded is unconfirmed any more, only the rows past the ladder, and
+  // with no cost on record those can never be counted as won.
+  if (key === 'unknown') {
+    return `${num(BEYOND.length)} more past the list, costs unrecorded`;
+  }
   let ahead = 0, behind = 0;
   for (let i = 0; i < LADDER.length; i++) {
     if (payout(LADDER[i]).bucket !== key) continue;
     if (i >= state.rung - 1) ahead++; else behind++;
   }
   if (ahead) return 'none yet';
-  return behind ? `all ${num(behind)} already claimed` : `${TRACK} never pays it`;
+  return behind ? `all ${num(behind)} recorded ones claimed` : 'none in the recorded rewards';
 }
 
 function renderTotals(r) {
@@ -1104,11 +1111,24 @@ function renderLadder(r) {
     </tr>`);
   }
 
+  /* The rows known to exist past the recorded ladder. No cost, so no running
+     total and no pinball count, and no click, since there is nothing to solve
+     for. They carry no `data-n`, which is what keeps the click handler and the
+     scroll to the frontier from ever landing on one. */
+  BEYOND.forEach((step, i) => {
+    rows.push(`<tr class="unconfirmed${i === 0 ? ' first' : ''}"
+        title="This reward exists, but what it costs was never recorded">
+      <td class="n">${LADDER.length + 1 + i}</td>
+      <td class="rw">${rewardText(step)}</td>
+      <td class="c" colspan="3">cost unconfirmed</td>
+    </tr>`);
+  });
+
   $('ladderBody').innerHTML = rows.join('');
   $('ladderTotal').textContent =
-    `All ${LADDER.length} recorded rewards: ${num(LADDER_TOTAL)} lightbulbs, `
-    + `about ${num(pinsToClear())} pinballs. The track carries on past here, `
-    + `unrecorded.`;
+    `All ${LADDER.length} confirmed rewards: ${num(LADDER_TOTAL)} lightbulbs, `
+    + `about ${num(pinsToClear())} pinballs. At least ${BEYOND.length} more come after `
+    + `these, but what they cost was never recorded.`;
 
   // Keep the frontier in view, scrolling the ladder box only, because scrollIntoView
   // would drag the whole page down on every keystroke.
@@ -1247,31 +1267,39 @@ function applyGoal() {
   // tile's fuller "Catch Tatari / Capsules", and neither wants lowercasing.
   const name = meta.short || meta.label;
   if (g.pins == null) {
-    // Nothing left to aim at: the track pays no more of this from here.
+    // Nothing left to aim at in what is recorded. Past it nobody knows, so the
+    // note says "as far as anyone knows" rather than "never".
     state.pins = 0;
     $('goalNote').textContent =
-      `Not possible: ${TRACK} pays no more ${name} from where you are.`;
+      `Not possible as far as anyone knows: the recorded rewards have no more `
+      + `${name} from where you are. The rewards after the end of the list have no `
+      + `costs on record, so they cannot be counted.`;
     return;
   }
   /* The pinballs shown follow the point being read off the chart, because in
      this mode that is what the chart is about: a lucky run needs fewer, and the
      page should then describe the run that brings fewer and just gets there. */
   state.pins = goalPinsAt(g, state.pctl);
+  /* A count of the rewards on the way, never the row they end on: the game shows
+     a card, not its place in a list, so "reward 33 of 69" names something no
+     player can see, while "33 rewards" is something they watch tick up. */
+  const claims = Math.max(0, g.rung - (state.rung - 1));
   $('goalNote').textContent = g.possible
-    ? `Reaching reward ${g.rung} of ${LADDER.length}`
+    ? `Claims ${num(claims)} ${claims === 1 ? 'reward' : 'rewards'} on the way`
       + (key === 'pinball' ? `, playing ${num(want)} in all` : '')
-    : `${TRACK} has only ${num(g.ceiling)} more ${name} in it, so ${num(want)} is `
-      + `out of reach. Showing what it takes to claim all ${num(g.ceiling)}, `
-      + `reaching reward ${g.rung} of ${LADDER.length}.`;
+    : `The recorded rewards have only ${num(g.ceiling)} more ${name}, so `
+      + `${num(want)} is out of reach as far as anyone knows. Showing what it takes `
+      + `to claim all ${num(g.ceiling)}.`;
 }
 
 /* ---------- "where am I" -----------------------------------------------------
-   The card in the game shows a cost and a reward. 30 of the 70 rungs share a
-   cost with another rung, and cost+reward still leaves 9 ambiguous groups (a
-   220 → 5 Catch Tatari card occurs six times). Adding the NEXT reward, which is also on
-   screen, cuts that to a single pair, rungs 42 and 45, which are identical for
-   two rungs running. So the picker offers "this → next" and says when it cannot
-   tell those two apart. */
+   The card in the game shows a cost and a reward. 29 of the 69 rewards repeat a
+   cost an earlier one already has, and cost+reward still leaves 9 ambiguous
+   groups (a 220 → 5 Catch Tatari card occurs six times). Adding the NEXT reward,
+   which is also on screen, cuts that to two pairs with Gold Rush on: 260 → 5
+   Catch Tatari then Candy, and 1,310 → 25 Catch Tatari then 300 Pinballs. So the
+   picker offers "this → next", tags the two of a pair earlier and later, and
+   says when it is guessing. No row numbers on screen: the game never shows one. */
 
 function rungsCosting(cost) {
   const out = [];
@@ -1280,7 +1308,9 @@ function rungsCosting(cost) {
 }
 
 function rungLabel(n) {
-  const nxt = n < LADDER.length ? `, then ${rewardText(LADDER[n])}` : ', last rung';
+  const nxt = n < LADDER.length
+    ? `, then ${rewardText(LADDER[n])}`
+    : ', then the end of what is recorded';
   return `${rewardText(LADDER[n - 1])}${nxt}`;
 }
 
@@ -1304,16 +1334,27 @@ function refreshRungPicker() {
 
   pick.disabled = false;
   pick.innerHTML = matches
-    .map((n) => `<option value="${n}">${rungLabel(n)}</option>`).join('');
+    .map((n) => {
+      /* A card that appears more than once reads the same in every option, and
+         the old note told them apart by row number, which the game never shows.
+         So each one says which of the identical cards it is instead. */
+      const same = matches.filter((m) => rungLabel(m) === rungLabel(n));
+      const at = same.indexOf(n);
+      const which = same.length < 2 ? ''
+        : same.length === 2 ? (at === 0 ? ' (the earlier one)' : ' (the later one)')
+        : ` (the ${['first', 'second', 'third', 'fourth', 'fifth', 'sixth'][at] || 'next'} of them)`;
+      return `<option value="${n}">${rungLabel(n)}${which}</option>`;
+    }).join('');
   if (!matches.includes(state.rung)) state.rung = matches[0];
   pick.value = state.rung;
 
   const twin = matches.filter((n) => n !== state.rung
     && rungLabel(n) === rungLabel(state.rung));
   $('rungNote').textContent =
-    `Reward ${state.rung} of ${LADDER.length} · ${num(banked())} lightbulbs collected so far`
+    `${num(banked())} lightbulbs collected so far`
     + (twin.length
-        ? ` · reward ${twin.join(' and ')} looks identical, so this is a guess`
+        ? ` · this card appears ${twin.length === 1 ? 'twice' : `${twin.length + 1} times`} on `
+          + `the track, so pick the one your progress matches`
         : '');
 }
 
