@@ -8,9 +8,9 @@
 <meta name="description" content="Clash of Critters calculator for the Tatari Party / Mad Invention / Rebuild lightbulb track. Enter your pinballs to see what they win, or a goal to see how many pinballs it takes." />
 <meta name="theme-color" content="#15171c" />
 
-<!-- One address for every state the page can be in. The URL carries the whole
-     state (?e=...&p=...), so without this each shared link would be a separate
-     page to a search engine and a separate row in the visitor counter below. -->
+<!-- One address for the page. State lives in localStorage, not in the query, so
+     there is normally nothing to collapse; this still covers an old link that
+     carries one, which would otherwise be its own row in the counter below. -->
 <link rel="canonical" href="https://adj-acent.github.io/ClashOfCritterResourceCalculator/" />
 
 <!-- Open Graph (link previews on Discord, Reddit, forums, etc.) -->
@@ -30,6 +30,10 @@
     </h1>
     <p>For Tatari Party (also called Mad Invention or Rebuild). Enter your pinballs to see what they win, or enter a goal to see how many pinballs it takes.</p>
   </div>
+  <!-- The one way in. The controls used to carry a "?" each; what they said
+       belongs here, where someone looking for help looks first. -->
+  <button type="button" class="q q-big" data-help="howto"
+          aria-label="How to use this page">?</button>
 </header>
 
 <div class="wrap">
@@ -44,12 +48,12 @@
          input: either you say what you hold and the page says what it wins, or
          you say what you want and the page says what to bring. -->
     <div class="seg" id="modeRow" role="group" aria-label="Calculation">
-      <button type="button" data-mode="have">Pinballs → Rewards</button>
-      <button type="button" data-mode="want">Goal → Pinballs</button>
+      <button type="button" data-mode="have">Predict Rewards</button>
+      <button type="button" data-mode="want">Predict Pinballs needed</button>
     </div>
 
     <section id="haveBox">
-      <h2>Pinballs in hand <button type="button" class="q" data-help="pins" aria-label="What is this?">?</button></h2>
+      <h2>Pinballs in hand</h2>
       <div class="row">
         <input id="pins" type="number" min="0" step="10" value="0" inputmode="numeric" />
         <button id="clearAll" class="danger">Clear</button>
@@ -66,7 +70,7 @@
     </section>
 
     <section id="wantBox" hidden>
-      <h2>Goal <button type="button" class="q" data-help="goal" aria-label="What is this?">?</button></h2>
+      <h2>Goal</h2>
       <div class="row">
         <label><span class="sr-label">Amount wanted</span>
           <input id="goalAmount" type="number" min="0" step="10" value="0" inputmode="numeric" />
@@ -81,7 +85,7 @@
 
   <div class="panel controls controls-more">
     <section>
-      <h2>Active event <button type="button" class="q" data-help="event" aria-label="What is this?">?</button></h2>
+      <h2>Active event</h2>
       <div class="row">
         <label><span class="sr-label">Active event</span>
           <select id="sideSelect"></select>
@@ -90,7 +94,7 @@
     </section>
 
     <section>
-      <h2>Gold Rush <button type="button" class="q" data-help="gold" aria-label="What is this?">?</button></h2>
+      <h2>Gold Rush</h2>
       <label class="check">
         <input type="checkbox" id="goldRush" checked />
         <span>Gold Rush is active</span>
@@ -98,28 +102,32 @@
     </section>
 
     <section>
-      <h2>Pinballs won <button type="button" class="q" data-help="replay" aria-label="What is this?">?</button></h2>
+      <h2>Pinballs won</h2>
       <label class="check">
         <input type="checkbox" id="replay" checked />
         <span id="replayLabel"></span>
+        <button type="button" class="q" data-help="replay" aria-label="What is this?">?</button>
       </label>
       <label class="check" style="margin-top:8px">
         <input type="checkbox" id="slots" checked />
-        <span>Include Card Slot and Duel pinballs
-          <button type="button" class="q" data-help="slots" aria-label="What is this?">?</button></span>
+        <span>Include Card Slot and Duel pinballs</span>
       </label>
     </section>
 
     <section>
-      <h2>Luck <button type="button" class="q" data-help="spread" aria-label="What is this?">?</button></h2>
+      <h2>Luck</h2>
+      <label class="check">
+        <input type="checkbox" id="ranges" />
+        <span>Show ranges</span>
+      </label>
       <label class="check">
         <input type="checkbox" id="advanced" />
-        <span>Show the spread</span>
+        <span>Show possible outcomes chart</span>
       </label>
     </section>
 
     <section>
-      <h2>Launch size <button type="button" class="q" data-help="launch" aria-label="What is this?">?</button></h2>
+      <h2>Launch size</h2>
       <div class="quick-add mult-row" id="multRow"></div>
     </section>
 
@@ -179,7 +187,7 @@
       </div>
     </div>
 
-    <h2 class="sec">Rewards won</h2>
+    <h2 class="sec">Predicted rewards</h2>
     <div id="resList" class="res-list"></div>
 
     <h2 class="sec" id="ladderHeading"></h2>

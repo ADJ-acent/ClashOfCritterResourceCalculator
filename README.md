@@ -83,23 +83,31 @@ Everything on the page falls out of that distribution: `P(reach rung n)` is a
 tail sum, and because every quantity is monotone in `k`, a quantile of `k` is a
 quantile of any of them.
 
-### The spread is opt-in, and that is deliberate
+### Ranges and the chart are two switches
 
-By default every figure is the **average run**, labelled as such at the top
-of the results so a middle-of-the-range number is never read as a promise. No
-ranges, no chart, no percentages.
+Every figure is the **average run**, labelled as such at the top of the results
+so a middle-of-the-range number is never read as a promise. **Show ranges**, off
+by default, puts the band 80% of runs land in beside every figure luck touches,
+since a figure standing on its own reads as a promise. A band whose ends meet is
+printed as the one figure it is: what the track pays steps at fixed rewards, so
+at ×1 every run claims the same ones, and "55 to 55" says less than 55 does.
 
-The reason is that the spread is usually not worth the ceremony. At ×1 launches,
-the p10–p90 band on lightbulbs is **±2%**, "12,800, give or take 2%" is just
-"12,800", and a chart plus a percentile picker to say so costs more attention
-than it returns. It only becomes a real story at large launch sizes (±22% at
-×100, ±31% at ×200) or when you are one reward short of a boundary.
+**Show possible outcomes chart** is a separate question and starts off. At ×1
+launches the p10–p90 band on lightbulbs is **±2%**, and a chart plus a percentile
+picker to draw that costs more attention than it returns. It becomes a real
+story at large launch sizes (±22% at ×100, ±31% at ×200) or when you are one
+reward short of a boundary, which is when it is worth turning on.
 
-So **Show the spread** turns it on: ranges beside each figure, and the chart.
+The two are independent, with one seam behind the glass: a goal's 90% and 10%
+figures are full solves of the loop, and the goal chart's curve is spanned by
+those same two, so `solveFor()` works them out when either switch is on and
+skips them when neither is. That is why both start off, and why the help says to
+turn them off if the page feels slow: with neither on, a goal is one solve
+rather than three.
 
 ### Reading it at a chosen point
 
-With the spread shown, the **Possible outcomes** chart draws the distribution,
+With it turned on, the **Possible outcomes** chart draws the distribution,
 and clicking or dragging it picks which point of it the rest of the page
 describes. That is why "what you
 get" reports one concrete `k` rather than a blend: an averaged haul sits between
@@ -173,9 +181,9 @@ which is worth three more rewards on its own.
 
 ### Working backwards from a goal
 
-The sidebar has two modes, and only one of them is ever an input. **Pinballs →
+The sidebar has two modes, and only one of them is ever an input. **Predict
 Rewards** is the page as it was: you say what you hold, everything else is the
-answer. **Goal → Pinballs** turns it around: you say what you are after, and the
+answer. **Predict Pinballs needed** turns it around: you say what you want, and the
 pinballs to bring become the answer, shown as a figure on the right rather than
 typed into a box. That last part is the whole reason for the switch. A number the
 page worked out has no business sitting in a field you can type over, and the two
@@ -192,7 +200,7 @@ quoted are the points where it crosses:
 | *for a 90% chance* | where 9 runs in 10 get there |
 | *for a 10% chance* | where 1 run in 10 does |
 
-**The chart turns around with the question.** In "Goal → Pinballs" it draws the
+**The chart turns around with the question.** In "Predict Pinballs needed" it draws the
 distribution of what the goal *takes* rather than of what a pile gives: `P(you
 reach it bringing n)` only ever rises from 0 to 1, which makes it a CDF over the
 pinballs needed, so the requirement is as real a random variable as the haul is
@@ -209,7 +217,7 @@ curve is nearly a straight line. The two named picks still hand back the exact
 crossings rather than a reading, because at ×100 the outcomes sit 400 lightbulbs
 apart and the curve is a staircase no interpolation lands on.
 
-The last two appear only under **Show the spread**, like every other range here.
+The last two appear under **Show ranges**, like every other range here.
 At ×1 they often collapse onto the headline and are dropped: a pinball goal at
 ×1 is very nearly a hard number, since what you get to play is what you hold plus
 what the track hands back, and the track pays at fixed rungs. At ×200 the same
@@ -331,8 +339,9 @@ way: a player who has not started sees 0/10 with 20 Catch Tatari, that 0 is the
 very first reward, and the stage holds 11. `rungAt()` and `counterFor()` in
 `app.js` are the two directions of that mapping. A typed y/y is still accepted,
 since it is what the chart says, and the note says what the screen shows
-instead. The `?` beside the heading walks through it, with the event window and
-small card next to the same position entered on the page (`help/`).
+instead. The `?` beside the heading says what the section is for and shows one
+annotated picture (`help/`) tracing each number from the event window to the box
+it goes in, which is shorter than the walkthrough it replaced.
 
 `STAGES` in `data.js` stores the rewards stage by stage and the chart's counter is
 worked out from the position, so a correction never has to renumber anything.
@@ -360,26 +369,35 @@ screen, so the ladder carries a `Stage` column beside `#`, with a heavier rule
 where each stage starts. It follows the chart, and a grand prize's cell has a
 tooltip with the 0/y the game shows instead.
 
+### Help lives in one place
+
+The controls carry no "?" buttons any more, with two exceptions: **Preexisting
+progress**, which needs its pictures, and **Replay pinballs from Tatari Party**,
+which sits on the checkbox it describes rather than on the heading above it.
+Everything else is behind the large **?** in the header (`HELP.howto` in
+`data.js`). The results still explain themselves where they stand: the chart,
+Next up, the end panel, the ladder's Pinballs column, and the tiles the machine
+feeds.
+
 ### Where the state lives
 
-Written together by `save()`: the URL
-(`?e=raft&g=1&p=5000&r=23&w=100&m=10&y=1&s=0&b=1&i=g&ga=5000&gk=material`:
-event, gold rush, pinballs, rung, progress into it, launch size, replay, spread,
-the machine's own payback, input mode, and the goal, which is left off while
-there is none) so a result is linkable, and `localStorage` so the page comes back
-where you left it. A link wins over what the browser remembers, and only when it
-carries that field.
+`localStorage` holds the whole of `state`, written by `save()`, so this browser
+comes back where it left off. **The address bar is left clean.** The page used to
+carry the whole state in the query as well, which made a result linkable, at the
+price of every setting being an address of its own.
 
 **Where you stand is the exception, and is deliberately not remembered.** It is
 the one input that goes stale on its own: you play, the card moves, and the page
 has no way to know. Brought back by a refresh it quietly answers for a position
-you left behind, and being silently wrong is worse than being asked again. A
-pasted **link** still carries it, because someone opening a link means the
-position in it, and the two arrive looking identical, so the navigation type is
-what tells them apart (`isReload`); unknown counts as a link.
+you left behind, and being silently wrong is worse than being asked again. So it
+is asked again on every load.
 
 A goal is not like that. It is a wish rather than a fact about the world, so the
-mode and the goal are both remembered and both travel in a link.
+mode and the goal are both remembered.
+
+A query is still **read** once on arrival, if there is one, so `visual-test.sh`
+can start the page in a given state (`QUERY=`, under Development). It is cleared
+from the address bar straight after, and nothing ever writes one.
 
 Also stored in one place only: the work in progress notice, a per browser fact
 rather than part of a result (`coc.rc.seenWip.1`; bump the suffix to show it
@@ -397,18 +415,17 @@ bar on arrival, instead of the bar reading blank until you touch something.
 **Visits are counted by GoatCounter**, which needs no cookies and no consent
 banner. The dashboard at https://adjacent.goatcounter.com/ is shared with the
 Treasure Hunt solver and tells the two apart by path. GoatCounter files a visit
-under the path plus the query, and here the query is the whole state, from a
-shared link or written by `save()` on arrival, so left alone nearly every visit
-would be a row of its own. The `<link rel="canonical">` in `index.html` is what
-stops that: GoatCounter takes its path instead, and search engines hear the same
-thing, that every state is one page.
+under the path plus the query. Nothing writes a query any more, so visits land
+on one path by themselves; the `<link rel="canonical">` in `index.html` keeps
+that true for an old link that still carries one, and tells search engines the
+same.
 
 It skips `file:` and `localhost`, so opening the file and `visual-test.sh` are
-never counted. To leave your own browser out, visit with `#toggle-goatcounter`,
-but do it on the Treasure Hunt solver: `save()` rewrites the address without the
-hash, usually before the counter has loaded, so the toggle is unreliable here.
-The flag lives in `localStorage` on `adj-acent.github.io`, which both tools
-share, so setting it once covers both.
+never counted. To leave your own browser out, visit with `#toggle-goatcounter`.
+That works here now: nothing rewrites the address, and clearing a query keeps
+the hash. It used to be unreliable, since `save()` dropped the hash, usually
+before the counter had loaded. The flag lives in `localStorage` on
+`adj-acent.github.io`, which both tools share, so setting it once covers both.
 
 ## Files
 
@@ -420,7 +437,7 @@ share, so setting it once covers both.
 | `styles.css` | Palette and shell shared with the Treasure Hunt solver. |
 | `index.html` | Markup. |
 | `icons/` | Reward icons, extracted from the game client's own asset bundles. |
-| `help/` | The pictures in the "Preexisting progress" help: the event window and small event card from the game, and the same position entered on this page. |
+| `help/` | The picture in the "Preexisting progress" help: the event window and small event card, arrows to the box each number goes in. |
 | `scripts/visual-test.sh` | Headless Edge/Chrome screenshots into `.screenshots/`. |
 
 ## Categories
@@ -432,10 +449,11 @@ page's height under the pointer.
 
 The buckets:
 
-* **Pinballs**, counting both sources: the track's rungs and the machine's own
-  slots. That half carries no range, unlike material, because it is not still
-  open once the run on display is chosen: it is the payback that carried that
-  run to the launches it fired.
+* **Pinballs**, counting both sources: the track's rewards and the machine's own
+  slots. Both move with the same `k`, so the band is read off the distribution
+  (`pinsWon` in `compute()`) while the split beneath it describes the one run on
+  display. What the track pays steps at fixed rewards, so at ×1 every run passes
+  the same ones and the band closes to a single figure.
 * **Catch Tatari / Capsules**, one item under two names on the chart.
 * **Energy Drinks**, only while Gold Rush is on; those rewards pay candy
   otherwise, or in one case 120 pinballs.
@@ -507,9 +525,8 @@ whichever yields more.
   earlier recordings it settled three things, all now taken from the chart. The
   two rewards at 240 lightbulbs after the ×600 multiplier are one (100 energy
   drinks during Gold Rush, 120 pinballs without), so every reward after it is one
-  lower than in older links, and a shared link's `r=` from before points one
-  reward later than it used to, on top of the same shift when the phantom reward
-  36 came out. The 10 Catch Tatari after 480 pinballs costs 640, not 540. And the
+  lower than in older recordings, on top of the same shift when the phantom
+  reward 36 came out. The 10 Catch Tatari after 480 pinballs costs 640, not 540. And the
   350 lightbulb reward after it pays material, not candy: the candy is what it
   pays with no side event running.
 * The chart leaves the fishing rods off one material reward (350 lightbulbs, in

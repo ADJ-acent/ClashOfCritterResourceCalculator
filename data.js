@@ -276,6 +276,13 @@ const BUCKETS = {
 /* Text behind each "?" button. Anything that needs a sentence to be honest
    lives here rather than as a permanent paragraph on the page. */
 const HELP = {
+  /* TODO: write this. It is what the header's big "?" opens, and the only help
+     a first-time reader is offered, now that the controls carry none. The
+     entries below with no button left (event, gold, pins, slots, launch,
+     spread, goal) are kept as the source to write it from, and can go once it
+     is written. */
+  howto: 'Being written.',
+
   event: 'Material rewards on ' + TRACK + ' pay the material of the side event, in the amounts '
        + 'the game shows for that event. With no side event, they pay candy.\n\n'
        + 'The machine also pays material: 1 raft, fishing rod or iron pickaxe, 2 magic '
@@ -305,21 +312,15 @@ const HELP = {
   launch: 'A ×100 launch uses 100 pinballs and pays 100 times a single roll. The average '
         + 'result is the same at every launch size. Bigger launches vary more.',
 
-  where: 'Enter what the event window shows:\n\n'
-       + '1. Grand Prize Progress, x/y.\n'
-       + '2. The grand prize in the big card.\n'
-       + '3. The lightbulbs on the progress bar, like the 244 in 244/1120.\n\n'
-       + 'On a grand prize, the window already shows the next stage: 0/y, with the next grand '
-       + 'prize in the big card. The reward you are working on is the one next to the progress '
-       + 'bar, also shown on the small event card. In the example below it is 25 Catch Tatari '
-       + 'for 1,120. The next grand prize is also 25 Catch Tatari.\n\n'
+  where: 'Where you already are on ' + TRACK + ', so the results count only what your '
+       + 'pinballs win from here. Copy the three numbers off the event window, as below.\n\n'
        + 'Two stages of 8 end on 500 Pinballs. Pick the second if you have claimed a 500 '
-       + 'Pinballs grand prize or are working on one.\n\n'
-       + 'The note under the picker names your current reward. It should match the small card.',
+       + 'Pinballs grand prize or are working on one.',
 
-  spread: 'Off: every figure is an average run.\n'
-        + 'On: figures show the range 80% of runs land in, plus a chart of all outcomes.\n\n'
-        + 'At ×1 launches the range is about ±2%. Bigger launches widen it.',
+  spread: 'Ranges: the band 80% of runs land in, beside each figure.\n'
+        + 'Chart: every outcome, which can be clicked to read the page at one point of it.\n\n'
+        + 'At ×1 launches the range is about ±2%. Bigger launches widen it.\n\n'
+        + 'Both cost extra work on a goal. Turn them off if the page feels slow.',
 
   dist: 'How likely each outcome is. Taller bars are more likely. Click or drag to show the '
       + 'page for that outcome.\n\n'
@@ -332,8 +333,8 @@ const HELP = {
 
   goal: 'Enter an amount and pick a resource. The page shows the pinballs needed, and what '
       + 'else you win on the way.\n\n'
-      + 'The main figure gives a 50% chance. With Show the spread on, it also shows the '
-      + 'pinballs for a 90% chance and for a 10% chance.\n\n'
+      + 'The main figure gives a 50% chance. Beside it are the pinballs for a 90% chance '
+      + 'and for a 10% chance.\n\n'
       + 'Pinballs means pinballs played, which is what "use N pinballs" quests count. Some are '
       + 'paid back, so you need fewer of your own.\n\n'
       + 'Track rewards run out at the last reward. Ask for more than is left and the page shows '
@@ -357,22 +358,17 @@ const HELP = {
          + 'The machine pays energy cans only during Gold Rush.',
 };
 
-/* Pictures shown after a help text, as markup. Only "where you are now" has any:
-   the event window and the small event card from the game, and the same position
-   entered on this page, because the grand prize counter is easier to show than to
-   describe. Width and height are the files' own, so the popover is laid out at
-   full size before the images arrive. */
+/* The picture shown after a help text, as markup. Only "where you are now" has
+   one: the event window and the small event card, with an arrow from each number
+   to the box it goes in, because the grand prize counter is easier to show than
+   to describe. Width and height are the file's own, so the popover is laid out
+   at full size before the image arrives. */
 const HELP_FIGURES = {
   where: '<div class="help-figs">'
-    + '<figure class="help-game"><img src="help/where-game.jpg" width="480" height="759" '
-    + 'alt="The event window reading Grand Prize Progress 0/7, with 25 Catch Tatari in the big card and 244/1120 on the progress bar" />'
-    + '<figcaption>Event window: 0/7, next grand prize, progress bar</figcaption></figure>'
-    + '<figure class="help-card"><img src="help/where-card.jpg" width="275" height="359" '
-    + 'alt="The small event card on the main screen, showing 25 Catch Tatari and 244/1120" />'
-    + '<figcaption>Small card: current reward</figcaption></figure>'
-    + '<figure class="help-page"><img src="help/where-page.png" width="580" height="400" '
-    + 'alt="The calculator with 0/7, 25 Catch Tatari at 7/7 and 244 entered" />'
-    + '<figcaption>Entered on this page</figcaption></figure>'
+    + '<figure><img src="help/preexisting_progress_guide.png" width="1000" height="907" '
+    + 'alt="The event window reading Grand Prize Progress 0/7, with 25 Catch Tatari in '
+    + 'the big card and 244/1120 on the progress bar, and an arrow from each of those '
+    + 'numbers to the box it goes in on this page" /></figure>'
     + '</div>',
 };
 

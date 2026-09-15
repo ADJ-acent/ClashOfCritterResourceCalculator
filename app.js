@@ -12,23 +12,15 @@
 
 const LS = { pins: 'coc.rc.pins', side: 'coc.rc.side', gold: 'coc.rc.gold',
              mult: 'coc.rc.mult', replay: 'coc.rc.replay', adv: 'coc.rc.adv',
-             slots: 'coc.rc.slots',
+             slots: 'coc.rc.slots', ranges: 'coc.rc.ranges',
              mode: 'coc.rc.mode', goalAmt: 'coc.rc.goalAmt', goalKey: 'coc.rc.goalKey' };
 
 /* Where you stand is the one input that goes stale on its own: you play, the
    card moves, and the page has no way to know. Remembered across a refresh it
    quietly answers for a position you left behind, and being silently wrong is
-   worse than being asked again, so it is deliberately NOT stored.
-
-   A pasted link is the exception, because someone opening a link means the
-   position in it. Your own refresh does not, and the two arrive identically, so
-   the navigation type is what tells them apart. Unknown counts as a link: the
-   old behaviour, not a surprise. */
+   worse than being asked again, so it is deliberately NOT stored. It is asked
+   again on every load. */
 const OLD_POS_KEYS = ['coc.rc.rung', 'coc.rc.prog'];
-const isReload = (() => {
-  try { return (performance.getEntriesByType('navigation')[0] || {}).type === 'reload'; }
-  catch (_) { return false; }
-})();
 
 /* Nobody knows their running lightbulb total. The game shows the rung you are
    on, not a cumulative count. So position is entered as "the reward I'm working
@@ -40,7 +32,8 @@ const state = {
   mult: 1,        // launch size
   replay: true,   // play the pinballs the ladder pays back
   slots: true,    // count the pinballs the machine's own slots pay back
-  advanced: false, // show the spread: ranges, and the distribution chart
+  ranges: false,  // show the band 80% of runs land in beside each figure
+  advanced: false, // show the outcomes chart, which is a separate question
   target: null,   // reward a ladder click asked for, marked so the click shows
   /* Which end of the question you are entering. In 'have' the pinball count is
      yours and everything else is the answer; in 'want' it is the answer, solved
@@ -187,7 +180,8 @@ function compute() {
   }
   const fed = Object.keys(share);
 
-  let eBulbs = 0, ePlayed = 0, eRung = 0, eFromLadder = 0, eLaunches = 0, eFromSlots = 0;
+  let eBulbs = 0, ePlayed = 0, eRung = 0, eFromLadder = 0, eLaunches = 0, eFromSlots = 0,
+      ePinsWon = 0;
   /* What the machine's own slots paid: everything you ended up holding that you
      did not bring and the track did not hand you. And what a launch size leaves
      stranded, since a stub smaller than one launch cannot be fired. Between them
@@ -196,6 +190,13 @@ function compute() {
          yours + track + machine = played + left over  */
   const fromSlotsOf = (k) => Math.max(0, totalOf(k) - state.pins - backOf(k));
   const stubOf = (k) => Math.max(0, totalOf(k) - launchesOf(k) * m);
+  /* The pinballs you WIN, both halves of them: how far a run gets decides how
+     many pinball rewards it passes, and the machine's payback rides on the same
+     k, so one function covers both and is monotone in k like everything else
+     here. Counted from the card you are on, as the haul is. */
+  const baseWon = haul[state.rung - 1].pinball.qty;
+  const pinsWonOf = (k) => haul[reachOf(k).rung].pinball.qty - baseWon
+                           + Math.floor(fromSlotsOf(k));
   // What the machine pays directly needs a variance of its own: unlike
   // everything else it is still random once k is known, because the launches
   // that missed the bulbs each pay it or nothing. Accumulate E[X] and E[X²] to
@@ -215,6 +216,7 @@ function compute() {
     eRung += pr * R.rung;
     eFromLadder += pr * backOf(k);
     eFromSlots += pr * fromSlotsOf(k);
+    ePinsWon += pr * pinsWonOf(k);
     for (const key of fed) {
       const { p, per } = share[key];
       const mean = (launches - k) * p * m * per;
@@ -291,6 +293,7 @@ function compute() {
     launches: eLaunches,
     fromLadder: eFromLadder,
     fromSlots: eFromSlots,
+    pinsWon: { mean: ePinsWon, p10: at(0.1, pinsWonOf), p90: at(0.9, pinsWonOf) },
     rung: { mean: eRung, p10: at(0.1, (k) => reachOf(k).rung), p50: at(0.5, (k) => reachOf(k).rung),
             p90: at(0.9, (k) => reachOf(k).rung) },
     // Mean and variance are exact; the 10–90 band is a normal reading of them,
@@ -586,9 +589,10 @@ function solveFor(key, want) {
   const tol = Math.max(1, Math.round(hint / 500));
   const pins = pinsForChance(key, want, 0.5, hint, tol);
   // The other two are guessed from it, which is a far better start than the mean
-  // walk. Only worked out when the spread is on: with it off the page has
-  // nowhere to print them.
-  const spread = state.advanced && pins != null;
+  // walk. Each is a full solve, so they are worked out only when something will
+  // show them: the ranges beside the figure, or the curve the chart draws, which
+  // is spanned by these two.
+  const spread = pins != null && (state.ranges || state.advanced);
   const lucky = spread ? pinsForChance(key, want, 0.1, pins, tol) : null;
   const sure = spread ? pinsForChance(key, want, 0.9, pins, tol) : null;
   return {
@@ -606,7 +610,8 @@ function solveFor(key, want) {
 function goalSolve(key, want) {
   if (!(want > 0)) return { possible: true, pins: 0, rung: state.rung };
   const sig = [key, want, state.rung, state.progress, state.mult, state.replay,
-               state.slots, state.side.id, state.goldRush, state.advanced].join('|');
+               state.slots, state.side.id, state.goldRush, state.advanced,
+               state.ranges].join('|');
   if (goalCache.sig === sig) return goalCache.out;
 
   /* Asking for more than there is gets answered rather than refused. The page
@@ -698,9 +703,9 @@ function render() {
 }
 
 function renderSummary(r) {
-  // Ranges are the exception, not the rule: without the spread turned on every
-  // figure is simply the typical run, which is what people came for.
-  const wide = state.advanced && !r.certain;
+  // Ranges and the chart are separate questions: a range rides beside a figure,
+  // the chart is a thing of its own to read.
+  const wide = state.ranges && !r.certain;
 
   /* Say plainly what these numbers are. Without this the page looks like it is
      promising an outcome, when it is describing the middle of a range. */
@@ -709,7 +714,7 @@ function renderSummary(r) {
       ? `<b>${luckName(state.pctl).replace(/^./, (c) => c.toUpperCase())}</b>
          <span>${luckOdds(state.pctl)}</span>`
       : `<b>Average run</b><span>${
-          state.advanced ? '' : 'turn on Show the spread for ranges'}</span>`}
+          wide ? 'with the range 80% of runs land in' : ''}</span>`}
   </div>`];
 
   const tiles = [];
@@ -736,14 +741,19 @@ function renderSummary(r) {
       <i>${[
         // Says where the haul below starts, now that it counts only new rewards.
         state.rung > 1 ? `${num(Math.max(0, r.sel.rung - (state.rung - 1)))} new` : '',
-        wide ? `${r.rung.p10} to ${r.rung.p90} likely` : '',
+        // A band whose ends meet is not a band: at ×1 every run claims the same
+        // rewards, and "55 to 55" says less than 55 does.
+        wide && r.rung.p10 !== r.rung.p90 ? `${r.rung.p10} to ${r.rung.p90} likely` : '',
       ].filter(Boolean).join(' · ')}</i></div>`);
 
-  tiles.push(`<div class="stat">${wide
+  // Compared as printed, so a band the rounding closes reads as the one number
+  // it rounds to rather than as the same figure twice.
+  const bulbBand = wide && num(r.bulbs.p10) !== num(r.bulbs.p90);
+  tiles.push(`<div class="stat">${bulbBand
       ? `<b class="ranged">${num(r.bulbs.p10)} – ${num(r.bulbs.p90)}</b>`
       : `<b>${num(r.sel.bulbs)}</b>`}
       <span>lightbulbs</span>
-      ${wide ? `<i>${num(r.sel.bulbs)} (${luckName(state.pctl)})</i>` : ''}</div>`);
+      ${bulbBand ? `<i>${num(r.sel.bulbs)} (${luckName(state.pctl)})</i>` : ''}</div>`);
 
   // Three tiles either way: in "want" mode the pinballs played give up their
   // place to the pinballs to bring, which is the question that was asked.
@@ -988,21 +998,28 @@ function renderTotals(r) {
     // number, and the machine half carries its range.
     const mach = r.sel.machine[key];
     /* The machine's own slots pay pinballs, and those are as much a part of what
-       you get as the track's rungs are. No range on that half, unlike material:
-       it is not still open once the run on display has been picked, it is the
-       payback that carried this run to the launches it fired, and it is already
-       spelled out under the pinballs played. */
+       you get as the track's rewards are. Both halves move with the same k, so
+       the band comes off the distribution (r.pinsWon) while the split beneath it
+       describes the one run on display, the way the lightbulb tile does. */
     const slots = key === 'pinball' ? r.sel.fromSlots : 0;
     const value = t.qty + (mach ? mach.mean : 0) + slots;
     let amount;
-    if (slots >= 1 && value >= 0.5) {
-      amount = `<span class="res-main">${num(value)}</span><span class="extra">${num(t.qty)} from ${TRACK}`
-             + ` + ${num(slots)} from the machine</span>`;
+    if (key === 'pinball' && value >= 0.5) {
+      // Only a band that has two ends: what the track pays steps at the pinball
+      // rewards, so at ×1 every run passes the same ones and there is no band.
+      const lo = num(r.pinsWon.p10), hi = num(r.pinsWon.p90);
+      const wide = state.ranges && !r.certain && lo !== hi;
+      amount = `<span class="res-main${wide ? ' ranged' : ''}">${
+                 wide ? `${lo} to ${hi}` : num(value)}</span>`
+             + (slots >= 1
+                 ? `<span class="extra">${num(t.qty)} from ${TRACK}`
+                   + ` + ${num(slots)} from the machine</span>`
+                 : '');
     } else if (mach && value >= 0.5) {
       // The headline is the TOTAL, so "including N guaranteed" refers to a part
       // of the number above it. The range is there because the machine's share
       // is luck; the track's share is fixed.
-      const wide = state.advanced && !r.certain;
+      const wide = state.ranges && !r.certain;
       const total = wide
         ? `${num(t.qty + mach.p10)} to ${num(t.qty + mach.p90)}`
         : num(t.qty + mach.mean);
@@ -1373,30 +1390,19 @@ function refreshStagePicker() {
     + `${num(banked())} lightbulbs collected`;
 }
 
-/* Both stores hold the whole of `state`, and they are written together: the URL
-   so a result can be pasted to someone, localStorage so this browser comes back
-   where it left off. Splitting them by field is what would be confusing.
+/* localStorage holds the whole of `state`, so this browser comes back where it
+   left off. The address bar is deliberately left alone: the state used to ride
+   in the query as well, which made every setting an address of its own.
 
-   Writing them from ONE place is what keeps them honest. Scattered through the
-   handlers they drifted, because not every change comes from a handler:
+   Writing from ONE place is what keeps it honest. Scattered through the
+   handlers it drifted, because not every change comes from a handler:
    refreshStagePicker() moves the rung on its own when the typed stage counter
    points at a different reward, and nothing was saving that. render() calls this
    after the picker has settled, so every path persists by construction, the
-   first render included, which is also what puts the restored state in the
-   address bar rather than leaving it blank until the first click.
+   first render included.
 
-   replaceState throws on file:// in some browsers, and localStorage throws in
-   private mode; neither may take the app down. */
+   localStorage throws in private mode, which may not take the app down. */
 function save() {
-  try {
-    history.replaceState(null, '',
-      `?e=${state.side.id}&g=${state.goldRush ? 1 : 0}&p=${state.pins}`
-      + `&r=${state.rung}&w=${state.progress}&m=${state.mult}`
-      + `&y=${state.replay ? 1 : 0}&s=${state.advanced ? 1 : 0}`
-      + `&b=${state.slots ? 1 : 0}`
-      + `&i=${state.mode === 'want' ? 'g' : 'p'}`
-      + (state.goal.want > 0 ? `&ga=${state.goal.want}&gk=${state.goal.key}` : ''));
-  } catch (_) { /* opened from disk, and the app works fine without it */ }
   try {
     localStorage.setItem(LS.pins, state.pins);
     localStorage.setItem(LS.side, state.side.id);
@@ -1404,13 +1410,14 @@ function save() {
     localStorage.setItem(LS.replay, state.replay ? '1' : '0');
     localStorage.setItem(LS.slots, state.slots ? '1' : '0');
     localStorage.setItem(LS.adv, state.advanced ? '1' : '0');
+    localStorage.setItem(LS.ranges, state.ranges ? '1' : '0');
     localStorage.setItem(LS.mult, state.mult);
     // A goal is a wish, not a fact about the world, so unlike where you stand it
     // does not go stale while you play and is safe to remember.
     localStorage.setItem(LS.mode, state.mode);
     localStorage.setItem(LS.goalAmt, state.goal.want);
     localStorage.setItem(LS.goalKey, state.goal.key);
-  } catch (_) { /* private mode: the link still carries everything */ }
+  } catch (_) { /* private mode: this browser simply does not come back */ }
 }
 
 function init() {
@@ -1432,6 +1439,7 @@ function init() {
   if (remembered(LS.replay) === '0') state.replay = false;
   if (remembered(LS.slots) === '0') state.slots = false;
   if (remembered(LS.adv) === '1') state.advanced = true;
+  if (remembered(LS.ranges) === '1') state.ranges = true;
   if (MULTIPLIERS.includes(Number(remembered(LS.mult)))) {
     state.mult = Number(remembered(LS.mult));
   }
@@ -1441,31 +1449,40 @@ function init() {
     want: Math.max(0, Number(remembered(LS.goalAmt)) || 0),
   };
 
-  // A shared link wins over whatever this browser remembers.
+  /* A query is not state: nothing writes one, and the address bar is left
+     clean. It is read once, so visual-test.sh can start the page in a given
+     state (QUERY= in scripts/visual-test.sh), and then cleared from the bar, so
+     a refresh behaves like any other arrival. */
   const q = new URLSearchParams(location.search);
   const qSide = SIDE_EVENTS.find((e) => e.id === q.get('e'));
   if (qSide) state.side = qSide;
   if (q.get('g') === '0') state.goldRush = false;
   if (q.get('g') === '1') state.goldRush = true;
   if (q.get('p') !== null) state.pins = Math.max(0, Math.floor(Number(q.get('p')) || 0));
-  // A link carries the position, a refresh of your own page does not.
-  if (!isReload) {
-    if (q.get('r') !== null) {
-      state.rung = Math.min(LADDER.length, Math.max(1, Math.floor(Number(q.get('r')) || 1)));
-    }
-    if (q.get('w') !== null) state.progress = Math.max(0, Math.floor(Number(q.get('w')) || 0));
+  if (q.get('r') !== null) {
+    state.rung = Math.min(LADDER.length, Math.max(1, Math.floor(Number(q.get('r')) || 1)));
   }
+  if (q.get('w') !== null) state.progress = Math.max(0, Math.floor(Number(q.get('w')) || 0));
   if (q.get('y') === '0') state.replay = false;
   if (q.get('y') === '1') state.replay = true;
   if (q.get('b') === '0') state.slots = false;
   if (q.get('b') === '1') state.slots = true;
   if (q.get('s') === '1') state.advanced = true;
   if (q.get('s') === '0') state.advanced = false;
+  if (q.get('rg') === '1') state.ranges = true;
+  if (q.get('rg') === '0') state.ranges = false;
   if (MULTIPLIERS.includes(Number(q.get('m')))) state.mult = Number(q.get('m'));
   if (q.get('i') === 'g') state.mode = 'want';
   if (q.get('i') === 'p') state.mode = 'have';
   if (q.get('ga') !== null) state.goal.want = Math.max(0, Math.floor(Number(q.get('ga')) || 0));
   if (BUCKETS[q.get('gk')]) state.goal.key = q.get('gk');
+  // replaceState throws on file:// in some browsers, and a clean bar is not
+  // worth taking the app down for.
+  if (location.search) {
+    // The hash is kept: #toggle-goatcounter is read after this runs.
+    try { history.replaceState(null, '', location.pathname + location.hash); }
+    catch (_) { /* fine */ }
+  }
 
   state.progress = Math.min(state.progress, LADDER[state.rung - 1].cost - 1);
 
@@ -1474,6 +1491,7 @@ function init() {
   $('replay').checked = state.replay;
   $('slots').checked = state.slots;
   $('advanced').checked = state.advanced;
+  $('ranges').checked = state.ranges;
   $('pins').value = state.pins;
   // Filled in as the event window would read, which for a grand prize is 0 of
   // the next stage rather than the chart's own y/y.
@@ -1494,6 +1512,11 @@ function init() {
 
   $('advanced').addEventListener('change', (e) => {
     state.advanced = e.target.checked;
+    update();
+  });
+
+  $('ranges').addEventListener('change', (e) => {
+    state.ranges = e.target.checked;
     update();
   });
 

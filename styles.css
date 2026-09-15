@@ -234,6 +234,12 @@ button.q {
   cursor: help; vertical-align: middle;
 }
 button.q:hover { color: var(--accent); border-color: var(--accent); }
+/* The header's own help button. Sized to be found rather than to match the
+   small ones, and it does not shrink when the title wraps beside it. */
+.q.q-big {
+  width: 34px; height: 34px; flex: none;
+  font-size: 18px; color: var(--accent); border-color: var(--accent);
+}
 #helpPop {
   position: fixed; z-index: 60;
   background: var(--panel2);
@@ -245,13 +251,11 @@ button.q:hover { color: var(--accent); border-color: var(--accent); }
   max-height: 70vh; overflow-y: auto;
 }
 
-/* Pictures under a help text: the tall event window down the left, and the small
-   event card over the same position entered on this page down the right, which
-   keeps the two columns about level. The text above relies on pre-wrap, which
-   the figures must not inherit. */
+/* The picture under a help text: one annotated image across the popover, which
+   is why the popover widens when a help entry has one. The text above relies on
+   pre-wrap, which the figure must not inherit. */
 .help-figs {
   white-space: normal;
-  display: grid; grid-template-columns: 46% 1fr; gap: 10px 12px;
   margin-top: 12px;
 }
 .help-figs figure { margin: 0; min-width: 0; }
@@ -259,9 +263,6 @@ button.q:hover { color: var(--accent); border-color: var(--accent); }
   display: block; width: 100%; height: auto;
   border: 1px solid var(--line); border-radius: 6px;
 }
-.help-figs figcaption { margin-top: 4px; font-size: 11px; line-height: 1.35; color: var(--muted); }
-.help-figs .help-game { grid-row: 1 / span 2; }
-.help-figs .help-card img { width: 55%; }
 
 /* ---------- outcome distribution ---------- */
 .dist { margin-top: 22px; }
