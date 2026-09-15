@@ -2,26 +2,30 @@
    DATA: the reward ladder.
 
    Mad Invention, Tatari Party and Rebuild are the same mechanism under three
-   names: one ordered list of rungs, read top to bottom. Each rung costs a
-   number of lightbulbs; once that many have been handed in, the rung pays out
-   and the next one starts. Nothing is skippable and nothing is chosen, so the
-   whole event is a running total.
+   names: one ordered list of rewards, read top to bottom. Each costs a number of
+   lightbulbs; once that many have been handed in, it pays out and the next one
+   starts. Nothing is skippable and nothing is chosen, so the whole event is a
+   running total.
 
-   Two things outside the ladder decide what a rung actually hands you:
+   The rewards come in stages. The chart numbers each reward x/y within its
+   stage, the last being the grand prize at y/y. The first stage alone counts
+   from 0, so it holds 11 rewards under /10; every other stage counts from 1.
+   The event window's counter follows that numbering except on a grand prize,
+   which it already shows as 0 of the next stage: app.js turns one into the
+   other (rungAt, counterFor).
 
-   * Which side event is running. The material rungs pay that event's material
-     (boards, rods, pickaxes, zobo coins or fertiliser), and they are the same
-     reward at a fixed exchange rate, so the ladder stores base units and
-     SIDE_EVENTS multiplies. This is why the three recordings looked different:
-     step 18 was read as 40 boards, 8,000 shop coins and 80 fertiliser, which is
-     40 units under all three rates.
+   Two things outside the ladder decide what a reward actually hands you:
 
-   * Whether Gold Rush is running. The drink rungs pay energy drinks while it
-     is, and candy while it is not.
+   * Which side event is running. Material rewards pay that event's material, at
+     the amounts the chart prints for each. Those sit close to a fixed rate but
+     not on one (Flying Shoes least of all), so each is stored as printed. With
+     no side event running they pay the candy printed beside them.
 
-   `qty: null` means the payout size was never recorded. Candy has no qty at all,
-   because the amount is rolled per event rather than printed, so candy is
-   counted, never summed.
+   * Whether Gold Rush is running. Drink rewards pay energy drinks while it is,
+     and `off` while it is not: candy on all but one, which pays pinballs.
+
+   Card rewards print candy beside the pack as well, but always pay the pack. The
+   `candy` on those is kept only because the chart has it.
    ========================================================================= */
 
 /* What to call the lightbulb track on screen. The game rotates the name between
@@ -30,262 +34,360 @@
    Change this line when the name changes. */
 const TRACK = 'Tatari Party';
 
-/* Where to send a correction or a deeper pass. TODO: fill in the Discord invite.
-   Empty until then, and the help text says a link is coming rather than pointing
-   nowhere. */
+/* Where to send a correction. TODO: fill in the Discord invite. Empty until
+   then, and the help text says a link is coming rather than pointing nowhere. */
 const COMMUNITY = '';
 
-const LADDER = [
-  /*  1 */ { cost: 80,   res: 'pinball',  qty: 80 },
-  /*  2 */ { cost: 70,   res: 'candy' },
-  /*  3 */ { cost: 150,  res: 'tatari',   qty: 5 },
-  /*  4 */ { cost: 100,  res: 'drink',    qty: 50 },
-  /*  5 */ { cost: 200,  res: 'pinball',  qty: 120 },
-  /*  6 */ { cost: 220,  res: 'tatari',   qty: 5 },
-  /*  7 */ { cost: 300,  res: 'boost',    qty: 5 },      // x2 for 5 minutes
-  /*  8 */ { cost: 120,  res: 'card',     qty: 1 },      // the chart prints 2 cards, which is one pack
-  /*  9 */ { cost: 400,  res: 'pinball',  qty: 200 },
-  /* 10 */ { cost: 250,  res: 'material', qty: 50 },
-  /* 11 */ { cost: 890,  res: 'tatari',   qty: 20 },
-  /* 12 */ { cost: 160,  res: 'pinball',  qty: 80 },
-  /* 13 */ { cost: 130,  res: 'drink',    qty: 55 },
-  /* 14 */ { cost: 300,  res: 'pinball',  qty: 120 },
-  /* 15 */ { cost: 220,  res: 'tatari',   qty: 5 },
-  /* 16 */ { cost: 200,  res: 'candy' },
-  /* 17 */ { cost: 220,  res: 'tatari',   qty: 5 },
-  /* 18 */ { cost: 200,  res: 'material', qty: 40 },
-  /* 19 */ { cost: 1000, res: 'pinball',  qty: 500 },
-  /* 20 */ { cost: 340,  res: 'drink',    qty: 165 },
-  /* 21 */ { cost: 190,  res: 'tatari',   qty: 5 },
-  /* 22 */ { cost: 250,  res: 'candy' },
-  /* 23 */ { cost: 220,  res: 'tatari',   qty: 5 },
-  /* 24 */ { cost: 250,  res: 'card',     qty: 1 },
-  /* 25 */ { cost: 220,  res: 'tatari',   qty: 5 },
-  /* 26 */ { cost: 250,  res: 'material', qty: 50 },
-  /* 27 */ { cost: 1000, res: 'pinball',  qty: 500 },
-  /* 28 */ { cost: 220,  res: 'tatari',   qty: 5 },
-  /* 29 */ { cost: 240,  res: 'pinball',  qty: 120 },
-  /* 30 */ { cost: 330,  res: 'candy' },
-  /* 31 */ { cost: 600,  res: 'boost',    qty: 10 },     // x2 for 10 minutes
-  /* 32 */ { cost: 240,  res: 'pinball',  qty: 120 },
-  /* 33 */ { cost: 240,  res: 'drink',    qty: 100 },
-  /* 34 */ { cost: 1120, res: 'tatari',   qty: 25 },
-  /* 35 */ { cost: 240,  res: 'pinball',  qty: 120 },
-  /* 36 */ { cost: 290,  res: 'material', qty: 50 },
-  /* 37 */ { cost: 260,  res: 'tatari',   qty: 5 },
-  /* 38 */ { cost: 290,  res: 'candy' },
-  /* 39 */ { cost: 530,  res: 'tatari',   qty: 10 },
-  /* 40 */ { cost: 290,  res: 'candy' },      // once recorded blank, see DATA_NOTES
-  /* 41 */ { cost: 1310, res: 'tatari',   qty: 25 },
-  /* 42 */ { cost: 710,  res: 'pinball',  qty: 300 },
-  /* 43 */ { cost: 580,  res: 'drink',    qty: 200 },
-  /* 44 */ { cost: 1310, res: 'tatari',   qty: 25 },
-  /* 45 */ { cost: 710,  res: 'pinball',  qty: 300 },
-  /* 46 */ { cost: 290,  res: 'card',     qty: 1 },
-  /* 47 */ { cost: 260,  res: 'tatari',   qty: 5 },
-  /* 48 */ { cost: 580,  res: 'candy' },
-  /* 49 */ { cost: 2860, res: 'pinball',  qty: 1000 },
-  /* 50 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 51 */ { cost: 350,  res: 'material', qty: 50 },
-  /* 52 */ { cost: 400,  res: 'pinball',  qty: 140 },
-  /* 53 */ { cost: 700,  res: 'candy' },
-  /* 54 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 55 */ { cost: 860,  res: 'pinball',  qty: 300 },
-  /* 56 */ { cost: 700,  res: 'drink',    qty: 200 },
-  /* 57 */ { cost: 1910, res: 'tatari',   qty: 30 },   // recorded as "30 Capsules", same item
-  /* 58 */ { cost: 1370, res: 'pinball',  qty: 480 },
-  /* 59 */ { cost: 540,  res: 'tatari',   qty: 10 },
-  /* 60 */ { cost: 350,  res: 'candy' },
-  /* 61 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 62 */ { cost: 760,  res: 'candy' },
-  /* 63 */ { cost: 640,  res: 'tatari',   qty: 10 },
-  /* 64 */ { cost: 1710, res: 'pinball',  qty: 600 },
-  /* 65 */ { cost: 630,  res: 'drink',    qty: 180 },
-  /* 66 */ { cost: 320,  res: 'tatari',   qty: 5 },
-  /* 67 */ { cost: 1290, res: 'pinball',  qty: 450 },
-  /* 68 */ { cost: 700,  res: 'material', qty: 100 },
-  /* 69 */ { cost: 960,  res: 'tatari',   qty: 15 },
+/* A material reward's amounts, in the chart's own order: Flying Shoes / Iron
+   Pickaxe / Raft / Fishing Rod / Bullet Coins / Magic Fertilizer. */
+const mat = (shoes, pickaxe, raft, rod, coins, fertiliser) =>
+  ({ shoes, pickaxe, raft, rod, coins, fertiliser });
+
+/* One array per stage, its rewards in order, the last being the one the stage
+   ends on. The stage counter is worked out from the position, so a correction is
+   an edit here and the numbering follows. */
+const STAGES = [
+  [ // 0/10 to 10/10, ends on 20 Catch Tatari
+    { cost: 80,    res: 'pinball',  qty: 80 },
+    { cost: 70,    res: 'candy',    qty: 12000 },
+    { cost: 150,   res: 'tatari',   qty: 5 },
+    { cost: 100,   res: 'drink',    qty: 50,   off: { res: 'candy', qty: 15000 } },
+    { cost: 200,   res: 'pinball',  qty: 120 },
+    { cost: 220,   res: 'tatari',   qty: 5 },
+    { cost: 300,   res: 'boost',    qty: 5 },      // Super Multiplier ×300: x2 for 300 seconds
+    { cost: 120,   res: 'card',     qty: 1,    candy: 15000 },
+    { cost: 400,   res: 'pinball',  qty: 200 },
+    { cost: 250,   res: 'material', qty: mat(10, 50, 50, 50, 5000, 100), candy: 30000 },
+    { cost: 890,   res: 'tatari',   qty: 20 },
+  ],
+  [ // x/8, ends on 500 Pinballs, the first of two
+    { cost: 160,   res: 'pinball',  qty: 80 },
+    { cost: 130,   res: 'drink',    qty: 55,   off: { res: 'candy', qty: 16000 } },
+    { cost: 300,   res: 'pinball',  qty: 120 },
+    { cost: 220,   res: 'tatari',   qty: 5 },
+    { cost: 200,   res: 'candy',    qty: 24000 },
+    { cost: 220,   res: 'tatari',   qty: 5 },
+    { cost: 200,   res: 'material', qty: mat(5, 40, 40, 40, 4000, 80), candy: 24000 },
+    { cost: 1000,  res: 'pinball',  qty: 500 },
+  ],
+  [ // x/8, ends on 500 Pinballs, the second of two
+    { cost: 340,   res: 'drink',    qty: 165,  off: { res: 'candy', qty: 50000 } },
+    { cost: 190,   res: 'tatari',   qty: 5 },
+    { cost: 250,   res: 'candy',    qty: 30000 },
+    { cost: 220,   res: 'tatari',   qty: 5 },
+    { cost: 250,   res: 'card',     qty: 1,    candy: 30000 },
+    { cost: 220,   res: 'tatari',   qty: 5 },
+    { cost: 250,   res: 'material', qty: mat(10, 50, 50, 50, 5000, 100), candy: 30000 },
+    { cost: 1000,  res: 'pinball',  qty: 500 },
+  ],
+  [ // x/6, ends on 25 Catch Tatari
+    { cost: 220,   res: 'tatari',   qty: 5 },
+    { cost: 240,   res: 'pinball',  qty: 120 },
+    { cost: 330,   res: 'candy',    qty: 40000 },
+    { cost: 600,   res: 'boost',    qty: 10 },     // Super Multiplier ×600
+    { cost: 240,   res: 'drink',    qty: 100,  off: { res: 'pinball', qty: 120 } },
+    { cost: 1120,  res: 'tatari',   qty: 25 },
+  ],
+  [ // x/7, ends on 25 Catch Tatari
+    { cost: 240,   res: 'pinball',  qty: 120 },
+    { cost: 290,   res: 'material', qty: mat(10, 50, 50, 50, 4920, 100), candy: 30000 },
+    { cost: 260,   res: 'tatari',   qty: 5 },
+    { cost: 290,   res: 'candy',    qty: 30000 },
+    { cost: 530,   res: 'tatari',   qty: 10 },
+    { cost: 290,   res: 'candy',    qty: 30000 },
+    { cost: 1310,  res: 'tatari',   qty: 25 },
+  ],
+  [ // x/8, ends on 1,000 Pinballs
+    { cost: 710,   res: 'pinball',  qty: 300 },
+    { cost: 580,   res: 'drink',    qty: 200,  off: { res: 'candy', qty: 60000 } },
+    { cost: 1310,  res: 'tatari',   qty: 25 },
+    { cost: 710,   res: 'pinball',  qty: 300 },
+    { cost: 290,   res: 'card',     qty: 1,    candy: 30000 },
+    { cost: 260,   res: 'tatari',   qty: 5 },
+    { cost: 580,   res: 'candy',    qty: 60000 },
+    { cost: 2860,  res: 'pinball',  qty: 1000 },
+  ],
+  [ // x/8, ends on 30 Catch Tatari
+    { cost: 320,   res: 'tatari',   qty: 5 },
+    // The chart leaves the fishing rods off this one; 50, as on every other reward of its size.
+    { cost: 350,   res: 'material', qty: mat(10, 50, 50, 50, 4900, 100), candy: 30000 },
+    { cost: 400,   res: 'pinball',  qty: 140 },
+    { cost: 700,   res: 'candy',    qty: 60000 },
+    { cost: 320,   res: 'tatari',   qty: 5 },
+    { cost: 860,   res: 'pinball',  qty: 300 },
+    { cost: 700,   res: 'drink',    qty: 200,  off: { res: 'candy', qty: 60000 } },
+    { cost: 1910,  res: 'tatari',   qty: 30 },
+  ],
+  [ // x/7, ends on 600 Pinballs
+    { cost: 1370,  res: 'pinball',  qty: 480 },
+    { cost: 640,   res: 'tatari',   qty: 10 },
+    { cost: 350,   res: 'material', qty: mat(10, 50, 50, 50, 4900, 100), candy: 30000 },
+    { cost: 320,   res: 'tatari',   qty: 5 },
+    { cost: 760,   res: 'candy',    qty: 65000 },
+    { cost: 640,   res: 'tatari',   qty: 10 },
+    { cost: 1710,  res: 'pinball',  qty: 600 },
+  ],
+  [ // x/16, ends on 1,100 Pinballs
+    { cost: 630,   res: 'drink',    qty: 180,  off: { res: 'candy', qty: 54000 } },
+    { cost: 320,   res: 'tatari',   qty: 5 },
+    { cost: 1290,  res: 'pinball',  qty: 450 },
+    { cost: 700,   res: 'material', qty: mat(15, 100, 100, 100, 9800, 200), candy: 60000 },
+    { cost: 960,   res: 'tatari',   qty: 15 },
+    { cost: 940,   res: 'candy',    qty: 80000 },
+    { cost: 800,   res: 'pinball',  qty: 280 },
+    { cost: 640,   res: 'tatari',   qty: 10 },
+    { cost: 700,   res: 'card',     qty: 1,    candy: 60000 },
+    { cost: 1570,  res: 'pinball',  qty: 550 },
+    { cost: 700,   res: 'drink',    qty: 200,  off: { res: 'candy', qty: 60000 } },
+    { cost: 320,   res: 'tatari',   qty: 5 },
+    { cost: 1600,  res: 'pinball',  qty: 560 },
+    { cost: 1280,  res: 'tatari',   qty: 20 },
+    { cost: 1170,  res: 'material', qty: mat(25, 165, 165, 165, 16380, 330), candy: 100000 },
+    { cost: 3140,  res: 'pinball',  qty: 1100 },
+  ],
+  [ // x/20, ends on 40 Catch Tatari
+    { cost: 960,   res: 'tatari',   qty: 15 },
+    { cost: 490,   res: 'candy',    qty: 42000 },
+    { cost: 960,   res: 'tatari',   qty: 15 },
+    { cost: 850,   res: 'drink',    qty: 240,  off: { res: 'candy', qty: 73000 } },
+    { cost: 960,   res: 'tatari',   qty: 15 },
+    { cost: 2570,  res: 'pinball',  qty: 900 },
+    { cost: 1030,  res: 'material', qty: mat(20, 145, 145, 145, 14420, 290), candy: 88000 },
+    { cost: 1280,  res: 'tatari',   qty: 20 },
+    { cost: 2170,  res: 'pinball',  qty: 760 },
+    { cost: 1290,  res: 'candy',    qty: 110000 },
+    { cost: 1280,  res: 'tatari',   qty: 20 },
+    { cost: 1400,  res: 'drink',    qty: 395,  off: { res: 'candy', qty: 120000 } },
+    { cost: 1600,  res: 'pinball',  qty: 560 },
+    { cost: 640,   res: 'tatari',   qty: 10 },
+    { cost: 940,   res: 'candy',    qty: 80000 },
+    { cost: 3670,  res: 'pinball',  qty: 1100 },
+    { cost: 2050,  res: 'material', qty: mat(35, 250, 250, 250, 24600, 495), candy: 150000 },
+    { cost: 1120,  res: 'tatari',   qty: 15 },
+    { cost: 3000,  res: 'pinball',  qty: 900 },
+    { cost: 2980,  res: 'tatari',   qty: 40 },
+  ],
+  [ // x/15, ends on 2,200 Pinballs
+    { cost: 1360,  res: 'card',     qty: 1,    candy: 100000 },
+    { cost: 4670,  res: 'pinball',  qty: 1400 },
+    { cost: 1490,  res: 'tatari',   qty: 20 },
+    { cost: 1360,  res: 'drink',    qty: 330,  off: { res: 'candy', qty: 100000 } },
+    { cost: 2980,  res: 'tatari',   qty: 40 },
+    { cost: 2180,  res: 'candy',    qty: 160000 },
+    { cost: 2980,  res: 'tatari',   qty: 40 },
+    { cost: 5000,  res: 'pinball',  qty: 1500 },
+    { cost: 1970,  res: 'material', qty: mat(30, 200, 200, 200, 19700, 395), candy: 120000 },
+    { cost: 4470,  res: 'tatari',   qty: 50 },
+    { cost: 2960,  res: 'pinball',  qty: 740 },
+    { cost: 3930,  res: 'candy',    qty: 240000 },
+    { cost: 4470,  res: 'tatari',   qty: 50 },
+    { cost: 2620,  res: 'drink',    qty: 525,  off: { res: 'candy', qty: 160000 } },
+    { cost: 8800,  res: 'pinball',  qty: 2200 },
+  ],
+  [ // x/17, ends on 2,000 Pinballs
+    { cost: 3570,  res: 'tatari',   qty: 40 },
+    { cost: 3280,  res: 'candy',    qty: 200000 },
+    { cost: 5600,  res: 'pinball',  qty: 1400 },
+    { cost: 1970,  res: 'material', qty: mat(30, 200, 200, 200, 19700, 395), candy: 120000 },
+    { cost: 1340,  res: 'tatari',   qty: 15 },
+    { cost: 4520,  res: 'pinball',  qty: 1130 },
+    { cost: 2230,  res: 'tatari',   qty: 25 },
+    { cost: 3600,  res: 'candy',    qty: 220000 },
+    { cost: 5600,  res: 'pinball',  qty: 1400 },
+    { cost: 3570,  res: 'tatari',   qty: 40 },
+    { cost: 3200,  res: 'pinball',  qty: 800 },
+    { cost: 2230,  res: 'tatari',   qty: 25 },
+    { cost: 900,   res: 'drink',    qty: 180,  off: { res: 'candy', qty: 55000 } },
+    { cost: 2230,  res: 'tatari',   qty: 25 },
+    { cost: 4500,  res: 'candy',    qty: 220000 },
+    { cost: 2790,  res: 'tatari',   qty: 25 },
+    { cost: 10000, res: 'pinball',  qty: 2000 },
+  ],
+  [ // x/19, ends on 80 Catch Tatari
+    { cost: 2420,  res: 'material', qty: mat(30, 195, 195, 195, 19360, 390), candy: 118000 },
+    { cost: 3350,  res: 'tatari',   qty: 30 },
+    { cost: 5000,  res: 'pinball',  qty: 1000 },
+    { cost: 3070,  res: 'candy',    qty: 150000 },
+    { cost: 3350,  res: 'tatari',   qty: 30 },
+    { cost: 6140,  res: 'drink',    qty: 985,  off: { res: 'candy', qty: 300000 } },
+    { cost: 14000, res: 'pinball',  qty: 2800 },
+    { cost: 3350,  res: 'tatari',   qty: 30 },
+    { cost: 8600,  res: 'candy',    qty: 420000 },
+    { cost: 7000,  res: 'pinball',  qty: 1400 },
+    { cost: 7170,  res: 'material', qty: mat(80, 575, 575, 575, 57360, 1150), candy: 350000 },
+    { cost: 5580,  res: 'tatari',   qty: 50 },
+    { cost: 30000, res: 'pinball',  qty: 6000 },
+    { cost: 4470,  res: 'tatari',   qty: 40 },
+    { cost: 6140,  res: 'candy',    qty: 300000 },
+    { cost: 14000, res: 'pinball',  qty: 2800 },
+    { cost: 5580,  res: 'tatari',   qty: 50 },
+    { cost: 1880,  res: 'drink',    qty: 300,  off: { res: 'candy', qty: 92000 } },
+    { cost: 8930,  res: 'tatari',   qty: 80 },
+  ],
 ];
 
-/* Rows known to exist past the recorded ladder, with no cost on record. The track
-   runs to at least row 81, which pays 1,100 pinballs, but nobody wrote down the
-   lightbulbs anywhere from 70 to 81. A reward with no cost cannot be placed on
-   the walk, because every threshold the solver uses is a running total of costs,
-   so none of these feed a total and none of them can be reached. They are shown
-   so the page stops implying the track ends at 70.
+/* The stages laid end to end, which is the ladder everything else walks. Each
+   reward carries its place on the stage counter: `stage` is which stage, `x` and
+   `of` the x/y the game shows while it is the one being worked on.
+   STAGE_SPANS[g] is where stage g sits in LADDER, by index. */
+const LADDER = [];
+const STAGE_SPANS = [];
+STAGES.forEach((rewards, g) => {
+  const from = g === 0 ? 0 : 1;
+  const of = from + rewards.length - 1;
+  STAGE_SPANS.push({ start: LADDER.length, end: LADDER.length + rewards.length - 1, from, of });
+  rewards.forEach((r, i) => LADDER.push(Object.assign({ stage: g, x: from + i, of }, r)));
+});
 
-   To confirm one, give it its cost and move it to the end of LADDER. Only the
-   first of them can move, since each cost is counted from the one before. */
-const BEYOND = [
-  /* 70 */ { cost: null, res: 'unknown', qty: null },
-  /* 71 */ { cost: null, res: 'unknown', qty: null },
-  /* 72 */ { cost: null, res: 'unknown', qty: null },
-  /* 73 */ { cost: null, res: 'unknown', qty: null },
-  /* 74 */ { cost: null, res: 'unknown', qty: null },
-  /* 75 */ { cost: null, res: 'unknown', qty: null },
-  /* 76 */ { cost: null, res: 'unknown', qty: null },
-  /* 77 */ { cost: null, res: 'unknown', qty: null },
-  /* 78 */ { cost: null, res: 'unknown', qty: null },
-  /* 79 */ { cost: null, res: 'unknown', qty: null },
-  /* 80 */ { cost: null, res: 'unknown', qty: null },
-  /* 81 */ { cost: null, res: 'pinball',  qty: 1100 },
-];
+/* The side events, and what a material reward pays in each.
 
-/* The side events, and what a material rung pays in each.
+   `mat` is which of a material reward's amounts the event pays, and `per` is
+   what one of the machine's material payouts is worth in it: 1 raft, rod or
+   pickaxe, 2 fertilizer, 100 bullet coins. Flying Shoes get 0, because the
+   machine pays them too rarely to count, so Marathon Star is the track's shoes
+   alone. With no side event running, material rewards pay their candy and the
+   machine pays no material at all.
 
-   `per` is that event's material per base unit:
-       1 rod = 1 board = 1 pickaxe = 2 fertiliser = 200 zobo coins.
-
-   `icon` is the game's own sprite, pulled from the client's asset bundles.
-   All five were found in the client's own bundles. */
+   `icon` is the game's own sprite, pulled from the client's asset bundles. Raft
+   Race used to be Marathon and still borrows its boards sprite until the raft
+   is extracted; Flying Shoes have none yet. */
 const SIDE_EVENTS = [
-  { id: 'marathon', name: 'Marathon',      material: 'Boards',     one: 'board',       per: 1,   icon: 'icons/boards.png' },
-  { id: 'fishing',  name: 'Fishing',       material: 'Rods',       one: 'rod',         per: 1,   icon: 'icons/rods.png' },
-  { id: 'treasure', name: 'Treasure Hunt', material: 'Pickaxes',   one: 'pickaxe',     per: 1,   icon: 'icons/pickaxe.png' },
-  { id: 'zobo',     name: 'Zobo Shooter',  material: 'Zobo Coins', one: 'zobo coins',  per: 200, icon: 'icons/zobo.png' },
-  { id: 'farm',     name: 'Cozy Farm',     material: 'Fertiliser', one: 'fertiliser',  per: 2,   icon: 'icons/fertiliser.png' },
+  { id: 'raft',     name: 'Raft Race',     material: 'Raft',             mat: 'raft',       per: 1,   icon: 'icons/boards.png' },
+  { id: 'fishing',  name: 'Fishing',       material: 'Fishing Rods',     mat: 'rod',        per: 1,   icon: 'icons/rods.png' },
+  { id: 'treasure', name: 'Treasure Hunt', material: 'Iron Pickaxes',    mat: 'pickaxe',    per: 1,   icon: 'icons/pickaxe.png' },
+  { id: 'zobo',     name: 'Zobo Shooter',  material: 'Bullet Coins',     mat: 'coins',      per: 100, icon: 'icons/zobo.png' },
+  { id: 'farm',     name: 'Cozy Farm',     material: 'Magic Fertilizer', mat: 'fertiliser', per: 2,   icon: 'icons/fertiliser.png' },
+  { id: 'star',     name: 'Marathon Star', material: 'Flying Shoes',     mat: 'shoes',      per: 0,   icon: null },
+  { id: 'none',     name: 'No side event', material: 'Material',         mat: null,         per: 0,   icon: null },
 ];
 
-/* One tile per bucket, in this order. `countOnly` means the payout size is
-   never printed, so the tile counts rewards instead of summing units.
-   `short` is what a ladder row calls the reward, where the tile's fuller name
-   would read badly ("5 Catch Tatari", not "5 Catch Tatari / Capsules"), and
-   `singular` is that name at a quantity of one ("1 Blue Card Pack"). */
+/* One tile per bucket, in this order. `short` is what a ladder row calls the
+   reward, where the tile's fuller name would read badly ("5 Catch Tatari", not
+   "5 Catch Tatari / Capsules"), and `singular` is that name at a quantity of
+   one ("1 Blue Card Pack"). */
 const BUCKETS = {
   pinball:  { label: 'Pinballs',              icon: 'icons/pinball.png' },
   tatari:   { label: 'Catch Tatari / Capsules', short: 'Catch Tatari', icon: 'icons/catch.png' },
   drink:    { label: 'Energy Drinks',         icon: 'icons/drink.png' },
-  candy:    { label: 'Candy',                 icon: 'icons/candy.png', countOnly: true, note: 'amount varies' },
+  candy:    { label: 'Candy',                 icon: 'icons/candy.png' },
   material: { label: 'Material',              icon: null },   // named by the side event
   card:     { label: 'Blue Card Packs',       singular: 'Blue Card Pack', icon: 'icons/card.png' },
   boost:    { label: 'x2 Multiplier',         icon: 'icons/boost.png', unit: 'min' },
-  // Counted, not summed, for any rung whose payout was never recorded. There is
-  // none in LADDER now that the blank at 290 turned out to be candy, but the tile
-  // stays: it carries the "?" about the rows past the ladder, whose rewards are
-  // unconfirmed along with their costs.
-  unknown:  { label: 'Unconfirmed',           icon: null, countOnly: true,
-              note: 'reward never recorded' },
 };
 
 /* Text behind each "?" button. Anything that needs a sentence to be honest
    lives here rather than as a permanent paragraph on the page. */
 const HELP = {
-  event: TRACK + ' pays the material of whichever side event is running. '
-       + 'They are the same reward at a fixed rate: 1 board = 1 rod = 1 pickaxe = '
-       + '2 fertiliser = 200 zobo coins, so picking the right event only changes the '
-       + 'name and the number, not what you are actually getting.',
+  event: 'Material rewards on ' + TRACK + ' pay the material of the side event, in the amounts '
+       + 'the game shows for that event. With no side event, they pay candy.\n\n'
+       + 'The machine also pays material: 1 raft, fishing rod or iron pickaxe, 2 magic '
+       + 'fertilizer or 100 bullet coins per payout. Flying Shoes from the machine are too rare '
+       + 'to count, so Marathon Star counts only the shoes from the track.',
 
-  gold: 'Some ' + TRACK + ' rewards pay energy drinks during Gold Rush and candy when it '
-      + 'is not running. Candy amounts are rolled rather than printed, which is why candy '
-      + 'is only ever counted here, never totalled.',
+  gold: 'During Gold Rush, drink rewards pay energy drinks. Without it they pay candy, except '
+      + 'one that pays 120 pinballs.\n\n'
+      + 'During Gold Rush the machine also pays energy cans, and pays back fewer pinballs.',
 
-  pins: 'The pinballs you hold right now. Everything below is what happens if you play '
-      + 'them all. You do not spend lightbulbs. The machine pays them out and they move '
-      + 'you along ' + TRACK + '.\n\n'
-      + 'Each launch pays one reward and only one: 25.5% of the time it is 4 lightbulbs, '
-      + '22% of the time it is 1 unit of the running side event’s material, and while Gold '
-      + 'Rush is on it pays energy cans at that same rate. The rest is everything else the '
-      + 'machine drops, some of which is more pinballs, and those get played too.',
+  pins: 'The pinballs you have. Results assume you play all of them. Lightbulbs are won from '
+      + 'the machine, not spent.\n\n'
+      + 'Each launch pays one of:\n'
+      + '• 4 lightbulbs (25.5%)\n'
+      + '• 1 unit of side event material (22%)\n'
+      + '• energy cans, during Gold Rush (22%)\n'
+      + '• something else, sometimes pinballs, which are played too',
 
-  replay: TRACK + ' pays pinballs. Left on, those get played too, which wins more '
-        + 'lightbulbs, which reaches more rewards. It is a loop. Roughly every 100 pinballs you '
-        + 'play come back as 15 more, so your pile stretches about 18% further than it looks. '
-        + 'Turn it off to see what you get if you bank them instead.',
+  replay: 'On: pinballs from ' + TRACK + ' rewards are played too, which wins more lightbulbs. '
+        + 'Off: they are kept.\n\n'
+        + 'Over the whole track, every 100 pinballs played bring back about 12.',
 
-  slots: 'The machine pays pinballs out of its own slots as well, and those get played like any others, so your pile goes further than the number you typed.\n\n'
-       + 'It is lumpy: most launches pay none and a few pay a lot, which is why the figures here move when you turn it off. Turn it off to see what the page says without it, or if you would rather not count on it.',
+  slots: 'Card Slot and Duel pay pinballs too, and those are played as well.\n\n'
+       + 'The amount varies a lot: most launches pay none, a few pay many. Turn off to leave '
+       + 'them out.',
 
-  launch: 'The machine can fire several balls at once. A ×100 launch eats 100 balls and rolls '
-        + 'ONCE, paying 100 times the single-ball reward. Your average haul is exactly the '
-        + 'same either way, but the bigger the launch, the wilder the swing. Ten rolls of '
-        + '×100 can land far from what you expected; a thousand ×1 rolls almost cannot.',
+  launch: 'A ×100 launch uses 100 pinballs and pays 100 times a single roll. The average '
+        + 'result is the same at every launch size. Bigger launches vary more.',
 
-  where: 'The game never shows a running lightbulb total, so tell it where you are instead: '
-       + 'type the lightbulb cost printed on the reward you are working on, then pick that '
-       + 'reward from the list. Costs repeat along the track, so each option also names what '
-       + 'comes after it, so match that against your screen.',
+  where: 'Enter what the event window shows:\n\n'
+       + '1. Grand Prize Progress, x/y.\n'
+       + '2. The grand prize in the big card.\n'
+       + '3. The lightbulbs on the progress bar, like the 244 in 244/1120.\n\n'
+       + 'On a grand prize, the window already shows the next stage: 0/y, with the next grand '
+       + 'prize in the big card. The reward you are working on is the one next to the progress '
+       + 'bar, also shown on the small event card. In the example below it is 25 Catch Tatari '
+       + 'for 1,120. The next grand prize is also 25 Catch Tatari.\n\n'
+       + 'Two stages of 8 end on 500 Pinballs. Pick the second if you have claimed a 500 '
+       + 'Pinballs grand prize or are working on one.\n\n'
+       + 'The note under the picker names your current reward. It should match the small card.',
 
-  spread: 'By default every number here is a typical run, the outcome you should expect. Luck '
-        + 'moves it less than you would think: at ×1 launches, nine runs in ten land within about '
-        + '2% of that figure, which is why the plain number is usually the whole answer.\n\n'
-        + 'Turn this on when the swing matters: big launch sizes, or when you are one reward '
-        + 'short and want to know the odds. It adds the range beside each figure and a chart of '
-        + 'every way your pinballs could land, which you can click to read the page as a lucky '
-        + 'or unlucky run instead.',
+  spread: 'Off: every figure is an average run.\n'
+        + 'On: figures show the range 80% of runs land in, plus a chart of all outcomes.\n\n'
+        + 'At ×1 launches the range is about ±2%. Bigger launches widen it.',
 
-  dist: 'Luck decides how far your pinballs get you, and this is the shape of it. Tall bars '
-      + 'are the outcomes most likely to happen. Click or drag anywhere on it to read the '
-      + 'whole page as that outcome instead: a bad run, a typical one, a lucky one.\n\n'
-      + 'When you are aiming for something the chart turns around, because so does the '
-      + 'question. It then shows what the goal could TAKE rather than what a pile could give, '
-      + 'measured in pinballs, with the cheap end on the left, since needing fewer of them is '
-      + 'the lucky outcome. Clicking picks which run you are planning for, and the pinballs to '
-      + 'bring follow it.',
+  dist: 'How likely each outcome is. Taller bars are more likely. Click or drag to show the '
+      + 'page for that outcome.\n\n'
+      + 'For a goal, the chart shows pinballs needed instead. The left end needs fewer, which '
+      + 'is the lucky end.',
 
-  next: 'The bar is how far along this reward you would be. The line under it answers "will I '
-      + 'actually get it?", two ways depending on how close it is.\n\n'
-      + '"36% chance you reach it" means that out of every run with the pinballs you hold, 36% '
-      + 'END with that reward claimed, after playing everything, including the pinballs the '
-      + TRACK + ' pays back. It is about where you finish, not where you stand now.\n\n'
-      + 'Once the odds fall below 5% a percentage stops being worth reading, so it shows the '
-      + 'shortfall instead: how many more pinballs than you hold it takes. It is the halfway '
-      + 'number, not a promise: bring exactly that many and about half of runs claim the '
-      + 'reward while half fall short, so bring more if you want it for certain.',
+  next: 'Progress toward the next reward on the run shown.\n\n'
+      + '"More pinballs" is how many you need on top of what you have for a 50% chance of '
+      + 'reaching it. Bring more to be safer.',
 
-  goal: 'The same question from the other end. Say what you are after and the pinballs to '
-      + 'bring are worked out and shown on the right, with the rest of the page describing '
-      + 'that run, so you also see everything else you collect on the way there.\n\n'
-      + 'It is a chance, not a price. The figure is what gets you there on an average run, '
-      + 'which is another way of saying half of runs fall short of it. Turn on “Show the '
-      + 'spread” and it also gives you the number that gets there 90% of the time, and the '
-      + 'one a lucky run can manage.\n\n'
-      + 'Pinballs are offered too, and mean the number you get to PLAY rather than a net '
-      + 'gain, since that is what a "use N pinballs" quest counts. ' + TRACK + ' hands some '
-      + 'back, so playing 20,000 costs you fewer than 20,000 of your own.\n\n'
-      + 'Rewards from the track run out where the list of confirmed ones does, so asking for more '
-      + 'than it pays cannot be done. Rather than inventing a number it tells you the most '
-      + 'there is and shows you what claiming all of that takes. Event material has no '
-      + 'ceiling: the machine keeps paying it for as long as you keep playing, and energy '
-      + 'cans have none either while Gold Rush is running.',
+  goal: 'Enter an amount and pick a resource. The page shows the pinballs needed, and what '
+      + 'else you win on the way.\n\n'
+      + 'The main figure gives a 50% chance. With Show the spread on, it also shows the '
+      + 'pinballs for a 90% chance and for a 10% chance.\n\n'
+      + 'Pinballs means pinballs played, which is what "use N pinballs" quests count. Some are '
+      + 'paid back, so you need fewer of your own.\n\n'
+      + 'Track rewards run out at the last reward. Ask for more than is left and the page shows '
+      + 'the pinballs to claim all that is left. Event material has no limit, and neither do '
+      + 'energy cans during Gold Rush.',
 
   /* TODO: the Discord invite. The link is not settled yet, so the text says to
      come and tell us without saying where, which is half an ask. Put the URL in
-     `COMMUNITY` below and the sentence finishes itself. */
-  end: 'The track does not stop where this list does. At least ' + BEYOND.length + ' more '
-       + 'rewards come after it, and the furthest anyone has seen pays '
-       + BEYOND[BEYOND.length - 1].qty.toLocaleString('en-US') + ' pinballs, but nobody wrote '
-       + 'down what any of them cost. Every figure here is worked out from running totals of '
-       + 'costs, so a reward with no cost has no place in them: those are listed at the '
-       + 'bottom of the rewards, marked unconfirmed, and nothing on the page counts them.\n\n'
-     + 'So the end of the list is the end of what is KNOWN, not the end of the event. A run '
-       + 'that clears it keeps winning lightbulbs, and they go toward rewards nobody has '
-       + 'costed.\n\n'
-     + 'If you know what any of those later rewards cost, that is the missing piece and it '
-       + 'would be very welcome. '
-     + (COMMUNITY ? 'Come and tell us: ' + COMMUNITY : 'A link to where to send it is coming.'),
+     `COMMUNITY` above and the sentence finishes itself. */
+  end: 'That is all ' + LADDER.length + ' rewards in ' + STAGES.length + ' stages. The machine '
+     + 'still pays material, and energy cans during Gold Rush, after the last one.\n\n'
+     + 'If something does not match your game, '
+     + (COMMUNITY ? 'tell us: ' + COMMUNITY : 'a link to report it is coming.'),
 
-  need: 'The pinballs a typical run needs to reach this reward, counted from where you are '
-      + 'now. It already credits the pinballs ' + TRACK + ' hands back along the way, which '
-      + 'is why the numbers climb more slowly than the lightbulb costs beside them.\n\n'
-      + 'A tick means you have enough already. Click any row to fill that number in.',
+  need: 'Pinballs needed from where you are to reach this reward on an average run, counting '
+      + 'pinballs paid back on the way.\n\n'
+      + 'A tick means the reward is claimed on the run shown. Click a row to enter its number.',
 
-  machine: 'Most of this comes from the machine, not ' + TRACK + '. The track pays a few '
-         + 'big chunks of it, while the machine pays it out of launches that missed the '
-         + 'lightbulbs, which is the bulk of them. That is why the row is split: the track '
-         + 'half is fixed once you know how far you get, and the machine half is a range, '
-         + 'because it stays down to luck even after the lightbulbs are settled.\n\n'
-         + 'Energy cans work this way only while Gold Rush is running. Without it the machine '
-         + 'pays none, and the ' + TRACK + ' rungs that would have paid cans pay candy.',
+  machine: 'Two sources: a fixed amount from ' + TRACK + ' rewards, and a varying amount from '
+         + 'the machine, which pays most of it. The range is the machine part.\n\n'
+         + 'The machine pays energy cans only during Gold Rush.',
 };
 
-/* What the source chart could not settle. Kept for us, not shown on the page:
-   these are notes on the data's provenance, not something a player needs. The
-   same list is in the README under "Known gaps". */
+/* Pictures shown after a help text, as markup. Only "where you are now" has any:
+   the event window and the small event card from the game, and the same position
+   entered on this page, because the grand prize counter is easier to show than to
+   describe. Width and height are the files' own, so the popover is laid out at
+   full size before the images arrive. */
+const HELP_FIGURES = {
+  where: '<div class="help-figs">'
+    + '<figure class="help-game"><img src="help/where-game.jpg" width="480" height="759" '
+    + 'alt="The event window reading Grand Prize Progress 0/7, with 25 Catch Tatari in the big card and 244/1120 on the progress bar" />'
+    + '<figcaption>Event window: 0/7, next grand prize, progress bar</figcaption></figure>'
+    + '<figure class="help-card"><img src="help/where-card.jpg" width="275" height="359" '
+    + 'alt="The small event card on the main screen, showing 25 Catch Tatari and 244/1120" />'
+    + '<figcaption>Small card: current reward</figcaption></figure>'
+    + '<figure class="help-page"><img src="help/where-page.png" width="580" height="400" '
+    + 'alt="The calculator with 0/7, 25 Catch Tatari at 7/7 and 244 entered" />'
+    + '<figcaption>Entered on this page</figcaption></figure>'
+    + '</div>',
+};
+
+/* What the source chart could not settle, or where it disagreed with earlier
+   recordings. Kept for us, not shown on the page: these are notes on the data's
+   provenance, not something a player needs. The same list is in the README under
+   "Known gaps". */
 const DATA_NOTES = [
-  'Material rungs are stored in base units and converted for the running side event: 1 board = 1 rod = 1 pickaxe = 2 fertiliser = 200 zobo coins. The three recordings of the chart agree exactly under those rates.',
-  'Rung 13 (130 bulbs) was recorded as candy on two passes and as 55 cans on a third, the mark of a drink rung read with and without Gold Rush running. It is treated as a drink rung.',
-  'An earlier transcription had a candy at 290 as reward 36. That reward does not exist. The candy belongs to the 290 rung after 10 Catch Tatari, now reward 40, which had been recorded as blank. Every reward from 36 on is one lower than in older links and screenshots.',
-  'The card rungs are printed on the chart as 2 blue cards, which is one 2-card pack. The ladder stores packs, so each of those rungs is 1.',
-  'Candy amounts are rolled rather than printed, so candy is counted as a number of rewards, never a number of units.',
-  'The ladder is 69 costed rungs. The track runs to at least row 81, which pays 1,100 pinballs, but no cost was recorded for any row from 70 to 81, so those are listed in BEYOND and feed no total.',
+  'The ladder is the full chart: 150 rewards in 13 stages, with the stage counter, every candy amount and every event material printed.',
+  'Material amounts are stored as printed per event. They sit near 1 raft = 1 rod = 1 pickaxe = 2 fertilizer = 100 bullet coins, but not on it (4,920 and 4,900 bullet coins where 5,000 would fit, 495 fertilizer for 250 rafts), and Flying Shoes follow no rate at all.',
+  'The chart leaves the fishing rods off the 350 lightbulb material reward in the x/8 stage ending on 30 Catch Tatari. It is stored as 50, as on every other reward of that size.',
+  'Earlier recordings had two rewards at 240 lightbulbs after the ×600 multiplier, 120 pinballs and then 100 energy drinks. They are one reward: 100 energy drinks during Gold Rush, 120 pinballs without it. Every reward after it is one lower than in older links.',
+  'Earlier recordings had the 10 Catch Tatari after 480 pinballs at 540 lightbulbs, and the 350 lightbulb reward after it as candy. The chart has 640, and a material reward that pays candy only with no side event running.',
+  'Card rewards print candy beside the pack. Card packs have always been recorded as paid, so the candy is stored but never paid out.',
+  'The Super Multiplier ×300 and ×600 are read as x2 for 300 and 600 seconds, which is the 5 and 10 minutes earlier recordings gave them.',
 ];

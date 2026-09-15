@@ -63,19 +63,25 @@ function banked() {
 /* ---------- the ladder as this event pays it -------------------------------- */
 
 /* What a rung pays under the current conditions. A drink rung pays energy
-   drinks only while Gold Rush is running; otherwise that rung pays candy, whose
-   amount is never printed. A material rung is stored in base units and
-   converted to the running event's own material. */
+   drinks only while Gold Rush is running; otherwise it pays its `off`, candy on
+   all but one. A material rung pays the running event's own printed amount, or
+   its candy when no side event is running. */
 function payout(step) {
-  if (step.res === 'drink' && !state.goldRush) return { bucket: 'candy', qty: null };
-  if (step.res === 'material') return { bucket: 'material', qty: step.qty * state.side.per };
+  if (step.res === 'drink' && !state.goldRush) return { bucket: step.off.res, qty: step.off.qty };
+  if (step.res === 'material') {
+    // No side event running: the reward pays the candy printed beside it.
+    return state.side.mat
+      ? { bucket: 'material', qty: step.qty[state.side.mat] }
+      : { bucket: 'candy', qty: step.candy };
+  }
   return { bucket: step.res, qty: step.qty };
 }
 
-/* A bucket as it is currently named. Only the material bucket moves. */
+/* A bucket as it is currently named. Only the material bucket moves, and with no
+   side event running it keeps its generic name, since it holds nothing. */
 function bucketMeta(key) {
   const b = BUCKETS[key];
-  if (key === 'material') {
+  if (key === 'material' && state.side.mat) {
     return Object.assign({}, b, { label: state.side.material, icon: state.side.icon });
   }
   return b;
@@ -96,7 +102,9 @@ function bucketMeta(key) {
 const backRate = () => (state.slots ? returnRate(state.goldRush) : 0);
 
 function machineShare(key) {
-  if (key === 'material') {
+  // `per` is 0 for an event whose material the machine is not counted as paying
+  // (Flying Shoes), and for no side event at all.
+  if (key === 'material' && state.side.per > 0) {
     return { p: MACHINE.pMat / (1 - MACHINE.pBulb), per: state.side.per };
   }
   if (key === 'drink' && state.goldRush) {
@@ -106,12 +114,6 @@ function machineShare(key) {
 }
 const MACHINE_FED = ['material', 'drink'];
 
-const CUM_COST = (() => {
-  const out = [];
-  let c = 0;
-  for (const s of LADDER) { c += s.cost; out.push(c); }
-  return out;
-})();
 const LADDER_TOTAL = CUM_COST[CUM_COST.length - 1];
 
 /* Cumulative haul after each rung: totals[r] is what r rungs have paid.
@@ -120,7 +122,7 @@ const LADDER_TOTAL = CUM_COST[CUM_COST.length - 1];
 function cumulativeHaul() {
   const empty = () => {
     const o = {};
-    for (const k of Object.keys(BUCKETS)) o[k] = { qty: 0, count: 0, varies: 0 };
+    for (const k of Object.keys(BUCKETS)) o[k] = { qty: 0, count: 0 };
     return o;
   };
   const rows = [empty()];
@@ -131,8 +133,7 @@ function cumulativeHaul() {
     const pay = payout(LADDER[i]);
     const b = cur[pay.bucket];
     b.count++;
-    if (pay.qty == null) b.varies++;
-    else b.qty += pay.qty;
+    b.qty += pay.qty;
     rows.push(cur);
   }
   return rows;
@@ -148,7 +149,6 @@ function haulSince(haul, from, to) {
     out[k] = {
       qty: Math.max(0, b[k].qty - a[k].qty),
       count: Math.max(0, b[k].count - a[k].count),
-      varies: Math.max(0, b[k].varies - a[k].varies),
     };
   }
   return out;
@@ -165,11 +165,11 @@ function compute() {
 
   // k counts winning LAUNCHES, each worth m balls' reward.
   const bulbsOf = (k) => banked() + MACHINE.perHit * m * k;
-  const reachOf = (k) => ladderReach(bulbsOf(k));
+  const reachOf = (k) => ladderReach(bulbsOf(k), state.goldRush);
   // Must mirror the solver, including the two corrections it makes: the rungs
   // behind you were already collected, so only what the track pays FROM HERE is
   // playable, and the machine's own slot returns stretch the pile.
-  const already = ladderReach(banked()).pins;
+  const already = ladderReach(banked(), state.goldRush).pins;
   const backOf = (k) => (state.replay ? reachOf(k).pins - already : 0);
   /* Every ball a given k ends up holding, at the AVERAGE payback. The solver
      above spreads that payback over three stretches, so the reward and lightbulb
@@ -203,7 +203,7 @@ function compute() {
   const eMach = {}, eMach2 = {};
   for (const key of fed) { eMach[key] = 0; eMach2[key] = 0; }
   const totals = {};
-  for (const k of Object.keys(BUCKETS)) totals[k] = { qty: 0, count: 0, varies: 0 };
+  for (const k of Object.keys(BUCKETS)) totals[k] = { qty: 0, count: 0 };
 
   for (const [k, pr] of dist) {
     const R = reachOf(k);
@@ -226,7 +226,6 @@ function compute() {
     for (const key of Object.keys(totals)) {
       totals[key].qty += pr * h[key].qty;
       totals[key].count += pr * h[key].count;
-      totals[key].varies += pr * h[key].varies;
     }
   }
 
@@ -316,14 +315,6 @@ function compute() {
   };
 }
 
-/* Ladder pinballs paid out through each rung, so the credit below is a lookup. */
-const CUM_PINS = (() => {
-  const out = [];
-  let n = 0;
-  for (const s of LADDER) { if (s.res === 'pinball') n += s.qty; out.push(n); }
-  return out;
-})();
-
 /* Pinballs needed for a typical run to reach reward n, counted from where you
    are now. No bisection: reaching a lightbulb total of C means playing C/1.02
    balls, since a ball pays 1.02 lightbulbs on average, and the track hands back
@@ -339,9 +330,10 @@ function pinsForRung(n, base = banked()) {
   /* Credit only the rewards PASSED ON THE WAY, never reward n itself. Its own
      pinballs arrive for reaching it, so counting them is borrowing against a
      payout you have not had: reward 1 costs 78 balls and pays 80, which made it
-     look free. Wrong for all 18 pinball-paying rewards, worst at reward 49. */
-  const earned = n > 1 ? CUM_PINS[n - 2] : 0;
-  const credit = state.replay ? Math.max(0, earned - ladderReach(base).pins) : 0;
+     look free. Wrong for every pinball-paying reward, worst at the biggest. */
+  const earned = pinsThrough(n - 1, state.goldRush);
+  const credit = state.replay
+    ? Math.max(0, earned - ladderReach(base, state.goldRush).pins) : 0;
   const balls = (want - base) / (MACHINE.pBulb * MACHINE.perHit);
   /* `balls` is what must be PLAYED, and you do not have to own all of it: the
      machine's own slots hand some back, and those get played too, so a pile of
@@ -380,15 +372,16 @@ function yieldOf(pins) {
   // so the loop only replays rungs crossed from here. Starting it at 0 pays you
   // every pinball rung behind you a second time, which is what made a goal from
   // deep in the track read thousands of pinballs too cheap.
-  let played = 0, hand = pins * stretch, bulbs = base, paid = ladderReach(base).pins;
+  const gold = state.goldRush;
+  let played = 0, hand = pins * stretch, bulbs = base, paid = ladderReach(base, gold).pins;
   for (let i = 0; i < 100 && hand >= 1e-9; i++) {
     played += hand;
     bulbs = base + played * MACHINE.pBulb * MACHINE.perHit;
-    const R = ladderReach(bulbs);
+    const R = ladderReach(bulbs, gold);
     hand = state.replay ? (R.pins - paid) * stretch : 0;
     paid = R.pins;
   }
-  const R = ladderReach(bulbs);
+  const R = ladderReach(bulbs, gold);
   return { played, rung: R.rung, bulbs };
 }
 
@@ -397,8 +390,6 @@ function amountOf(pins, key) {
   const y = yieldOf(pins);
   if (key === 'pinball') return y.played;          // total played, not net
   const haul = haulSince(cumulativeHaul(), state.rung - 1, y.rung)[key];
-  const meta = bucketMeta(key);
-  if (meta.countOnly) return haul.count;
   const sh = machineShare(key);
   return haul.qty + y.played * sh.p * sh.per;
 }
@@ -422,22 +413,21 @@ function pGoal(pins, key, want) {
   const base = banked();
   const m = Math.max(1, state.mult);
   const dist = solveLoop(pins, base, m, state.replay, state.goldRush, state.slots);
-  const already = ladderReach(base).pins;
+  const already = ladderReach(base, state.goldRush).pins;
   const haul = cumulativeHaul();
-  const countOnly = bucketMeta(key).countOnly;
   const share = machineShare(key);
   const from = haul[Math.max(0, Math.min(state.rung - 1, haul.length - 1))][key];
   let acc = 0;
 
   /* The ladder is walked ONCE across the whole distribution rather than looked
      up per k. This runs inside a search that runs it dozens of times over, and
-     `k` only rises, so the rung only rises with it: a fresh scan of 70 rungs
+     `k` only rises, so the rung only rises with it: a fresh scan of the ladder
      for every one of a thousand outcomes was costing more than the solve. */
   let rung = 0, trackPins = 0;
   for (const [k, pr] of dist) {
     const bulbs = base + MACHINE.perHit * m * k;
     while (rung < LADDER.length && CUM_COST[rung] <= bulbs) {
-      if (LADDER[rung].res === 'pinball') trackPins += LADDER[rung].qty;
+      trackPins += pinsPaid(LADDER[rung], state.goldRush);
       rung++;
     }
     const launches = Math.floor(((pins + (state.replay ? trackPins - already : 0))
@@ -447,10 +437,9 @@ function pGoal(pins, key, want) {
       continue;
     }
     const to = haul[rung][key];
-    const got = { qty: Math.max(0, to.qty - from.qty),
-                  count: Math.max(0, to.count - from.count) };
+    const got = { qty: Math.max(0, to.qty - from.qty) };
     if (share.p === 0) {
-      if ((countOnly ? got.count : got.qty) >= want) acc += pr;
+      if (got.qty >= want) acc += pr;
       continue;
     }
     /* What the machine pays directly is still random once the lightbulbs are
@@ -649,7 +638,6 @@ function goalPinsApprox(key, want) {
 /* ---------- formatting ----------------------------------------------------- */
 
 const num = (n) => Math.round(n).toLocaleString('en-US');
-const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 const pct = (p) => (p >= 0.995 ? '100' : p <= 0.005 ? '<1' : (p * 100).toFixed(p < 0.1 ? 1 : 0));
 
 /* The reward as one line, e.g. "120 Pinballs", "x2 for 5 min", "Candy". */
@@ -657,8 +645,6 @@ function rewardText(step) {
   const pay = payout(step);
   const meta = bucketMeta(pay.bucket);
   const name = pay.qty === 1 && meta.singular ? meta.singular : (meta.short || meta.label);
-  if (pay.bucket === 'unknown') return 'not recorded';
-  if (pay.qty == null) return name;
   if (meta.unit === 'min') return `x2 for ${pay.qty} min`;
   return `${num(pay.qty)} ${name}`;
 }
@@ -680,9 +666,9 @@ function update() {
 }
 
 function render() {
-  // First, because the picker's labels name rewards, which the side event and
-  // Gold Rush rename, and because it can settle which rung we are on.
-  refreshRungPicker();
+  // First, because the picker's note names a reward, which the side event and
+  // Gold Rush rename, and because it settles which rung we are on.
+  refreshStagePicker();
   applyGoal();
   save();
 
@@ -720,10 +706,10 @@ function renderSummary(r) {
      promising an outcome, when it is describing the middle of a range. */
   const bits = [`<div class="view-label">
     ${wide && Math.abs(state.pctl - 0.5) > 0.02
-      ? `<b>${luckName(state.pctl).replace(/^an? /, '').replace(/^./, (c) => c.toUpperCase())}</b>
+      ? `<b>${luckName(state.pctl).replace(/^./, (c) => c.toUpperCase())}</b>
          <span>${luckOdds(state.pctl)}</span>`
-      : `<b>Average outcome</b><span>what a typical run gives you${
-          state.advanced ? '' : '. Turn on “Show the spread” for the range'}</span>`}
+      : `<b>Average run</b><span>${
+          state.advanced ? '' : 'turn on Show the spread for ranges'}</span>`}
   </div>`];
 
   const tiles = [];
@@ -736,11 +722,11 @@ function renderSummary(r) {
     ? goalSolve(state.goal.key, state.goal.want) : null;
   if (goal && goal.pins != null) {
     tiles.push(`<div class="stat"><b>${num(state.pins)}</b>
-      <span>pinballs to start${Math.abs(state.pctl - 0.5) <= 0.02 ? ', on average' : ''}</span>
+      <span>pinballs needed${Math.abs(state.pctl - 0.5) <= 0.02 ? ', 50% chance' : ''}</span>
       <i>${[// Says which number is being answered when it is not the one asked.
-            goal.possible ? '' : `for all ${num(goal.ceiling)}, every one recorded`,
-            wide && goal.sure > goal.pins ? `${num(goal.sure)} to be 90% sure` : '',
-            wide && goal.lucky < goal.pins ? `${num(goal.lucky)} if you are lucky` : '']
+            goal.possible ? '' : `for all ${num(goal.ceiling)} left`,
+            wide && goal.sure > goal.pins ? `${num(goal.sure)} for a 90% chance` : '',
+            wide && goal.lucky < goal.pins ? `${num(goal.lucky)} for a 10% chance` : '']
            // A line each: the tile is too narrow to keep them on one, and a
            // break mid-phrase reads worse than a break between the two.
            .filter(Boolean).join('<br />')}</i></div>`);
@@ -749,7 +735,7 @@ function renderSummary(r) {
   tiles.push(`<div class="stat"><b>${num(r.sel.rung)}</b><span>rewards claimed</span>
       <i>${[
         // Says where the haul below starts, now that it counts only new rewards.
-        state.rung > 1 ? `${num(Math.max(0, r.sel.rung - (state.rung - 1)))} new below` : '',
+        state.rung > 1 ? `${num(Math.max(0, r.sel.rung - (state.rung - 1)))} new` : '',
         wide ? `${r.rung.p10} to ${r.rung.p90} likely` : '',
       ].filter(Boolean).join(' · ')}</i></div>`);
 
@@ -757,7 +743,7 @@ function renderSummary(r) {
       ? `<b class="ranged">${num(r.bulbs.p10)} – ${num(r.bulbs.p90)}</b>`
       : `<b>${num(r.sel.bulbs)}</b>`}
       <span>lightbulbs</span>
-      ${wide ? `<i>${num(r.sel.bulbs)} on ${luckName(state.pctl)}</i>` : ''}</div>`);
+      ${wide ? `<i>${num(r.sel.bulbs)} (${luckName(state.pctl)})</i>` : ''}</div>`);
 
   // Three tiles either way: in "want" mode the pinballs played give up their
   // place to the pinballs to bring, which is the question that was asked.
@@ -771,7 +757,7 @@ function renderSummary(r) {
             ].filter(Boolean).join(' + '),
             state.mult > 1 ? `${num(r.sel.launches)} launches at ×${state.mult}` : '',
             // Names the shortfall in the sum above, which is otherwise a puzzle.
-            r.sel.stub >= 1 ? `${num(r.sel.stub)} left over, too few to fire` : '']
+            r.sel.stub >= 1 ? `${num(r.sel.stub)} left over, less than one launch` : '']
            .filter(Boolean).join(' · ')}</i></div>`);
   }
 
@@ -793,7 +779,7 @@ function renderSummary(r) {
            shortfall is the actionable number and holds still, because it depends
            on the pinballs you hold rather than on how the page is being read.
            Per-reward odds still live in the ladder's Chance column. */
-        short > 0 ? ` · <b class="odds">${num(short)} more pinballs gets half of runs there</b>` : ''
+        short > 0 ? ` · <b class="odds">${num(short)} more pinballs for a 50% chance</b>` : ''
       }</div>
     </div>`);
   } else {
@@ -803,9 +789,9 @@ function renderSummary(r) {
     const pAll = r.pReach(LADDER.length);
     bits.push(`<div class="next">
       <div class="next-head">
-        <span>All ${LADDER.length} confirmed rewards claimed
+        <span>All ${LADDER.length} rewards claimed
           <button type="button" class="q" data-help="end" aria-label="What is this?">?</button></span>
-        <span class="muted">${BEYOND.length} more known, costs unrecorded</span>
+        <span class="muted">track complete</span>
       </div>
       <div class="bar"><i style="width:100%"></i></div>
       <div class="muted small">${num(LADDER_TOTAL)} / ${num(LADDER_TOTAL)}${
@@ -813,7 +799,7 @@ function renderSummary(r) {
         // whole goal, and "you finished" is worth much less than "88% finish".
         r.certain || pAll >= 0.995
           ? ''
-          : ` · <b class="odds">${pct(pAll)}% of runs clear all ${LADDER.length}</b>`
+          : ` · <b class="odds">${pct(pAll)}% chance to clear all ${LADDER.length}</b>`
       }</div>
     </div>`);
   }
@@ -822,26 +808,26 @@ function renderSummary(r) {
 }
 
 /* How lucky a point on the distribution is, in words. "44th percentile" tells a
-   player nothing; "a bit below average" and "3 runs in 4 do better" do. */
+   player nothing; "below average" and "75% of runs do better" do. */
 function luckName(p) {
-  if (p <= 0.03) return 'about as bad as it gets';
-  if (p <= 0.18) return 'an unlucky run';
-  if (p < 0.42) return 'a bit below average';
-  if (p <= 0.58) return 'a typical run';
-  if (p < 0.82) return 'a bit above average';
-  if (p < 0.97) return 'a lucky run';
-  return 'about as good as it gets';
+  if (p <= 0.03) return 'worst case';
+  if (p <= 0.18) return 'unlucky run';
+  if (p < 0.42) return 'below average';
+  if (p <= 0.58) return 'typical run';
+  if (p < 0.82) return 'above average';
+  if (p < 0.97) return 'lucky run';
+  return 'best case';
 }
 
 /* The same point as plain odds. */
 function luckOdds(p) {
-  if (p <= 0.03) return 'almost every run does better';
-  if (p >= 0.97) return 'almost every run does worse';
+  if (p <= 0.03) return 'nearly all runs do better';
+  if (p >= 0.97) return 'nearly all runs do worse';
   const worse = Math.round(p * 100);
-  if (worse >= 45 && worse <= 55) return 'about half of runs do better, half worse';
+  if (worse >= 45 && worse <= 55) return 'half of runs do better';
   return worse < 50
-    ? `about ${100 - worse}% of runs do better than this`
-    : `about ${worse}% of runs do worse than this`;
+    ? `${100 - worse}% of runs do better`
+    : `${worse}% of runs do worse`;
 }
 
 /* The outcome distribution, drawn as bars, with the viewing point marked.
@@ -878,7 +864,7 @@ function renderGoalDist(goal) {
   box.querySelector('.dist-scale').innerHTML =
     `<span>${num(lo)}</span><span>${num(hi)}</span>`;
   $('distLabel').innerHTML =
-    `showing <b>${luckName(state.pctl)}</b>, needing <b>${num(state.pins)}</b> pinballs`;
+    `showing <b>${luckName(state.pctl)}</b>: <b>${num(state.pins)}</b> pinballs`;
 }
 
 function renderDist(r) {
@@ -888,7 +874,7 @@ function renderDist(r) {
     ? goalSolve(state.goal.key, state.goal.want) : null;
   const asGoal = !!(goal && goal.curve && state.advanced);
 
-  $('distTitle').textContent = asGoal ? 'What it could take' : 'How it could land';
+  $('distTitle').textContent = asGoal ? 'Pinballs needed' : 'Possible outcomes';
   box.querySelector('.dist-picks').classList.toggle('flip', asGoal);
   if (asGoal) {
     box.hidden = false;
@@ -971,31 +957,24 @@ function renderDist(r) {
   box.querySelector('.dist-scale').innerHTML =
     `<span>${num(lo)}</span><span>${num(hi)}</span>`;
   $('distLabel').innerHTML =
-    `showing <b>${luckName(state.pctl)}</b>, ${luckOdds(state.pctl)}`;
+    `showing <b>${luckName(state.pctl)}</b>: ${luckOdds(state.pctl)}`;
 }
 
 /* Why a tile reads 0. "none yet" promises that more pinballs would fix it, and
-   for the card packs and the x2 boost that is a lie: every recorded rung paying
-   those sits in the first 46, so past that point no pile of pinballs brings one
-   back from the rewards anyone has costed, and a row that keeps saying "none
-   yet" reads as a bug rather than an answer. "Recorded" is doing real work in
-   the wording: the rewards past the ladder have no costs on record, so whether
-   they pay one is simply not known. Counted from the card you are on, since
-   everything before it is claimed. */
+   for the x2 boost that is a lie: both rewards paying it sit in the first 31,
+   so past that point no pile of pinballs brings one back, and a row that keeps
+   saying "none yet" reads as a bug rather than an answer. Counted from the card
+   you are on, since everything before it is claimed. */
 function emptyReason(key) {
   if (key === 'drink' && !state.goldRush) return 'only while Gold Rush is on';
-  // Nothing recorded is unconfirmed any more, only the rows past the ladder, and
-  // with no cost on record those can never be counted as won.
-  if (key === 'unknown') {
-    return `${num(BEYOND.length)} more past the list, costs unrecorded`;
-  }
+  if (key === 'material' && !state.side.mat) return 'no side event, pays candy';
   let ahead = 0, behind = 0;
   for (let i = 0; i < LADDER.length; i++) {
     if (payout(LADDER[i]).bucket !== key) continue;
     if (i >= state.rung - 1) ahead++; else behind++;
   }
   if (ahead) return 'none yet';
-  return behind ? `all ${num(behind)} recorded ones claimed` : 'none in the recorded rewards';
+  return behind ? `all ${num(behind)} claimed` : `none on ${TRACK}`;
 }
 
 function renderTotals(r) {
@@ -1014,10 +993,10 @@ function renderTotals(r) {
        payback that carried this run to the launches it fired, and it is already
        spelled out under the pinballs played. */
     const slots = key === 'pinball' ? r.sel.fromSlots : 0;
-    const value = meta.countOnly ? count : t.qty + (mach ? mach.mean : 0) + slots;
+    const value = t.qty + (mach ? mach.mean : 0) + slots;
     let amount;
     if (slots >= 1 && value >= 0.5) {
-      amount = `${num(value)}<span class="extra">${num(t.qty)} from ${TRACK}`
+      amount = `<span class="res-main">${num(value)}</span><span class="extra">${num(t.qty)} from ${TRACK}`
              + ` + ${num(slots)} from the machine</span>`;
     } else if (mach && value >= 0.5) {
       // The headline is the TOTAL, so "including N guaranteed" refers to a part
@@ -1032,12 +1011,12 @@ function renderTotals(r) {
       const fromMachine = wide
         ? `${num(mach.p10)} to ${num(mach.p90)}`
         : num(mach.mean);
-      amount = `<span class="${wide ? 'ranged' : ''}">${total}</span>`
+      amount = `<span class="res-main${wide ? ' ranged' : ''}">${total}</span>`
              + (t.qty >= 1
                  ? `<span class="extra">${num(t.qty)} from ${TRACK} + ${fromMachine} from the machine</span>`
                  : '');
     } else {
-      amount = num(value) + (meta.unit === 'min' ? '<small> min</small>' : '');
+      amount = `<span class="res-main">${num(value)}${meta.unit === 'min' ? '<small> min</small>' : ''}</span>`;
     }
 
     // Tied to the number actually printed: a row that rounds to 0 says why it is
@@ -1048,19 +1027,15 @@ function renderTotals(r) {
     else if (mach)
       // The line under the number already names both halves, so this says the
       // thing that line cannot: which half is fixed and which is luck.
-      sub = `fixed from ${TRACK}, luck from the machine`;
+      sub = `fixed from ${TRACK}, varies from the machine`;
     else if (key === 'pinball') {
       sub = slots >= 1
         ? (state.replay
-            ? `from ${num(count)} rewards and the machine, played again`
-            : `${num(count)} rewards kept, the machine's own played`)
-        : `from ${num(count)} rewards, ${state.replay ? 'played again' : 'kept'}`;
+            ? `from ${num(count)} rewards and the machine, replayed`
+            : `from ${num(count)} rewards (kept) and the machine (replayed)`)
+        : `from ${num(count)} rewards, ${state.replay ? 'replayed' : 'kept'}`;
     }
-    else if (meta.note) sub = meta.note;
-    else {
-      sub = `from ${num(count)} ${Math.round(count) === 1 ? 'reward' : 'rewards'}`;
-      if (t.varies >= 0.5) sub += ` · ${num(t.varies)} with no set amount`;
-    }
+    else sub = `from ${num(count)} ${Math.round(count) === 1 ? 'reward' : 'rewards'}`;
 
     return `<div class="res-row${has ? '' : ' empty'}">
       ${meta.icon ? `<img class="res-icon" src="${meta.icon}" alt="" />`
@@ -1068,14 +1043,21 @@ function renderTotals(r) {
       <div class="res-text">
         <div class="res-name">${meta.label}${mach
           ? ' <button type="button" class="q" data-help="machine" aria-label="What is this?">?</button>'
-          : ''}${key === 'unknown'
-          ? ' <button type="button" class="q" data-help="end" aria-label="What is this?">?</button>'
           : ''}</div>
         <div class="res-sub">${sub}</div>
       </div>
       <div class="res-qty">${amount}</div>
     </div>`;
   }).join('');
+}
+
+/* The Stage column follows the chart, and a grand prize is the one place the
+   event window reads differently, so its cell says what the screen shows. */
+function shownTitle(n) {
+  const shown = counterFor(n);
+  const step = LADDER[n - 1];
+  return shown.x === step.x && shown.of === step.of ? ''
+    : ` title="Shown in game as ${shown.x}/${shown.of}"`;
 }
 
 function renderLadder(r) {
@@ -1100,35 +1082,23 @@ function renderLadder(r) {
       i < r.sel.rung ? 'done' : '',
       isTarget || (!state.target && i + 1 === r.nextIndex) ? 'cur' : '',
       isTarget ? 'target' : '',
-    ].filter(Boolean).join(' ');
-    rows.push(`<tr class="${cls}" data-n="${i + 1}" title="Click to fill in the pinballs that get you here">
+    ].filter(Boolean);
+    // A stage's first reward draws a heavier rule above it, except the very first.
+    if (i > 0 && step.stage !== LADDER[i - 1].stage) cls.push('stage-start');
+    rows.push(`<tr class="${cls.join(' ')}" data-n="${i + 1}" title="Click to enter the pinballs needed to reach this">
       <td class="n">${i + 1}</td>
-      <td class="rw">${rewardText(step)}${
-        step.note ? ` <span class="flag" title="${esc(step.note)}">?</span>` : ''}</td>
+      <td class="st"${shownTitle(i + 1)}>${step.x}/${step.of}</td>
+      <td class="rw">${rewardText(step)}</td>
       <td class="c">${num(step.cost)}</td>
       <td class="c cum">${num(cum)}</td>
       <td class="c odds">${need > 0 ? num(need) : ''}</td>
     </tr>`);
   }
 
-  /* The rows known to exist past the recorded ladder. No cost, so no running
-     total and no pinball count, and no click, since there is nothing to solve
-     for. They carry no `data-n`, which is what keeps the click handler and the
-     scroll to the frontier from ever landing on one. */
-  BEYOND.forEach((step, i) => {
-    rows.push(`<tr class="unconfirmed${i === 0 ? ' first' : ''}"
-        title="This reward exists, but what it costs was never recorded">
-      <td class="n">${LADDER.length + 1 + i}</td>
-      <td class="rw">${rewardText(step)}</td>
-      <td class="c" colspan="3">cost unconfirmed</td>
-    </tr>`);
-  });
-
   $('ladderBody').innerHTML = rows.join('');
   $('ladderTotal').textContent =
-    `All ${LADDER.length} confirmed rewards: ${num(LADDER_TOTAL)} lightbulbs, `
-    + `about ${num(pinsToClear())} pinballs. At least ${BEYOND.length} more come after `
-    + `these, but what they cost was never recorded.`;
+    `${LADDER.length} rewards in ${STAGES.length} stages: ${num(LADDER_TOTAL)} lightbulbs, `
+    + `about ${num(pinsToClear())} pinballs to clear.`;
 
   // Keep the frontier in view, scrolling the ladder box only, because scrollIntoView
   // would drag the whole page down on every keystroke.
@@ -1175,13 +1145,18 @@ function initHelp() {
       return;
     }
     pop.textContent = text;
+    // Pictures go under the text, and widen the popover to give them room.
+    const figs = HELP_FIGURES[btn.dataset.help];
+    if (figs) pop.insertAdjacentHTML('beforeend', figs);
     pop.dataset.for = btn.dataset.help;
     pop.hidden = false;
 
     // Anchor under the button, then pull back inside the viewport.
     const b = btn.getBoundingClientRect();
-    const w = Math.min(320, window.innerWidth - 20);
+    const w = Math.min(figs ? 440 : 320, window.innerWidth - 20);
     pop.style.width = w + 'px';
+    // Pictures make it tall, so it may use more of the screen before it scrolls.
+    pop.style.maxHeight = figs ? '90vh' : '';
     let left = b.left;
     if (left + w > window.innerWidth - 10) left = window.innerWidth - w - 10;
     pop.style.left = Math.max(10, left) + 'px';
@@ -1259,7 +1234,7 @@ function applyGoal() {
   const meta = bucketMeta(key);
   if (!(want > 0)) {
     state.pins = 0;
-    $('goalNote').textContent = 'Say what you are after, and what to bring appears on the right.';
+    $('goalNote').textContent = 'Enter an amount and pick a resource.';
     return;
   }
   const g = goalSolve(key, want);
@@ -1267,13 +1242,13 @@ function applyGoal() {
   // tile's fuller "Catch Tatari / Capsules", and neither wants lowercasing.
   const name = meta.short || meta.label;
   if (g.pins == null) {
-    // Nothing left to aim at in what is recorded. Past it nobody knows, so the
-    // note says "as far as anyone knows" rather than "never".
+    // Nothing left to aim at. Where a setting is the reason, say which, since
+    // "no more" alone would read as the track having run dry.
     state.pins = 0;
     $('goalNote').textContent =
-      `Not possible as far as anyone knows: the recorded rewards have no more `
-      + `${name} from where you are. The rewards after the end of the list have no `
-      + `costs on record, so they cannot be counted.`;
+      key === 'drink' && !state.goldRush ? 'Drink rewards pay energy drinks only during Gold Rush.'
+      : key === 'material' && !state.side.mat ? 'With no side event, material rewards pay candy.'
+      : `No ${name} left on ${TRACK} from here.`;
     return;
   }
   /* The pinballs shown follow the point being read off the chart, because in
@@ -1281,88 +1256,121 @@ function applyGoal() {
      page should then describe the run that brings fewer and just gets there. */
   state.pins = goalPinsAt(g, state.pctl);
   /* A count of the rewards on the way, never the row they end on: the game shows
-     a card, not its place in a list, so "reward 33 of 69" names something no
+     a card, not its place in a list, so "reward 33 of 150" names something no
      player can see, while "33 rewards" is something they watch tick up. */
   const claims = Math.max(0, g.rung - (state.rung - 1));
   $('goalNote').textContent = g.possible
     ? `Claims ${num(claims)} ${claims === 1 ? 'reward' : 'rewards'} on the way`
-      + (key === 'pinball' ? `, playing ${num(want)} in all` : '')
-    : `The recorded rewards have only ${num(g.ceiling)} more ${name}, so `
-      + `${num(want)} is out of reach as far as anyone knows. Showing what it takes `
-      + `to claim all ${num(g.ceiling)}.`;
+      + (key === 'pinball' ? `, ${num(want)} pinballs played` : '')
+    : `Only ${num(g.ceiling)} ${name} left on ${TRACK}. `
+      + `Showing the pinballs to claim all ${num(g.ceiling)}.`;
 }
 
 /* ---------- "where am I" -----------------------------------------------------
-   The card in the game shows a cost and a reward. 29 of the 69 rewards repeat a
-   cost an earlier one already has, and cost+reward still leaves 9 ambiguous
-   groups (a 220 → 5 Catch Tatari card occurs six times). Adding the NEXT reward,
-   which is also on screen, cuts that to two pairs with Gold Rush on: 260 → 5
-   Catch Tatari then Candy, and 1,310 → 25 Catch Tatari then 300 Pinballs. So the
-   picker offers "this → next", tags the two of a pair earlier and later, and
-   says when it is guessing. No row numbers on screen: the game never shows one. */
+   The event window shows a Grand Prize Progress counter, x/y, the grand prize
+   the stage ends on in the big card, and the reward being worked on beside the
+   progress bar (and on the small event card). The counter follows the chart's
+   stage column with one twist: on a grand prize itself the window has already
+   moved on, reading 0 of the next stage with the next grand prize in the big
+   card. So 0/y means the grand prize of the stage before, everywhere but the
+   first stage, where 0/10 is the very first reward. The chart's own y/y is still
+   accepted, and the note says what the screen shows instead.
 
-function rungsCosting(cost) {
-  const out = [];
-  LADDER.forEach((s, i) => { if (s.cost === cost) out.push(i + 1); });
-  return out;
+   The size places most stages, since only stages of 8 and of 7 come more than
+   once, and the grand prize tells those apart, all but two stages of 8 that both
+   end on 500 Pinballs, back to back, whose cards match at 4/8 and 6/8. The
+   picker names them the first and the second. The note under it names the
+   reward the position lands on, to check against the small card. No row numbers
+   on screen: the game never shows one. */
+
+const intOf = (v) => Math.max(0, Math.floor(Number(v) || 0));
+
+/* The rung the event window describes as x/y under stage g's grand prize. */
+function rungAt(g, x) {
+  return x === 0 && g > 0
+    ? STAGE_SPANS[g - 1].end + 1
+    : STAGE_SPANS[g].start + (x - STAGE_SPANS[g].from) + 1;
 }
 
-function rungLabel(n) {
-  const nxt = n < LADDER.length
-    ? `, then ${rewardText(LADDER[n])}`
-    : ', then the end of what is recorded';
-  return `${rewardText(LADDER[n - 1])}${nxt}`;
+/* What the event window reads while rung n is being worked on: its place on the
+   chart, except a grand prize, which reads 0 of the stage after it. The last
+   grand prize has no stage after it, so it keeps its own. */
+function counterFor(n) {
+  const card = LADDER[n - 1];
+  const next = STAGE_SPANS[card.stage + 1];
+  return STAGE_SPANS[card.stage].end === n - 1 && next
+    ? { x: 0, of: next.of }
+    : { x: card.x, of: card.of };
 }
 
-/* Repopulate the picker for whatever cost is typed, keeping the chosen rung if
-   it still fits. */
-function refreshRungPicker() {
-  const cost = Math.max(0, Math.floor(Number($('rungCost').value) || 0));
-  const matches = rungsCosting(cost);
-  const pick = $('rungPick');
+/* What the picker calls a stage: the reward it ends on, and which of a pair it
+   is when another stage of the same size ends on the same reward. */
+function stageLabel(g) {
+  const s = STAGE_SPANS[g];
+  const ends = rewardText(LADDER[s.end]);
+  const same = [];
+  STAGE_SPANS.forEach((t, h) => {
+    if (t.of === s.of && rewardText(LADDER[t.end]) === ends) same.push(h);
+  });
+  // Short enough for the sidebar's select: "500 Pinballs at 8/8, the second".
+  const which = same.length < 2 ? ''
+    : `, the ${['first', 'second', 'third', 'fourth'][same.indexOf(g)] || 'next'}`;
+  return `${ends} at ${s.of}/${s.of}${which}`;
+}
 
-  if (!matches.length) {
-    pick.innerHTML = `<option value="">${
-      cost ? '(no reward costs that)' : '(starting from the beginning)'}</option>`;
+/* Place the rung from the stage counter typed and the stage picked. The stage
+   already chosen is kept while it is still the size typed, which is what lets
+   the picker choose between stages without the counter undoing it. */
+function refreshStagePicker() {
+  const x = intOf($('stageX').value);
+  const y = intOf($('stageY').value);
+  const pick = $('stagePick');
+  const fits = [];
+  STAGE_SPANS.forEach((s, g) => { if (s.of === y) fits.push(g); });
+
+  if (!fits.length) {
+    // Left where it was rather than reset: a blank here is usually a number
+    // being retyped, and throwing away the position mid-edit would be worse.
+    pick.innerHTML = '<option value="">(no matching stage)</option>';
     pick.disabled = true;
-    $('rungNote').textContent = cost
-      ? `No ${TRACK} reward costs that. Check the number on the card.`
-      : 'Leave this at 0 if the event has not started for you yet.';
-    if (cost === 0) { state.rung = 1; state.progress = 0; }
+    $('rungNote').textContent = y
+      ? `No stage ends at ${y}/${y}. Check the number after the slash.`
+      : 'Enter Grand Prize Progress from the event window. Use 0/10 if you have not started.';
     return;
   }
 
   pick.disabled = false;
-  pick.innerHTML = matches
-    .map((n) => {
-      /* A card that appears more than once reads the same in every option, and
-         the old note told them apart by row number, which the game never shows.
-         So each one says which of the identical cards it is instead. */
-      const same = matches.filter((m) => rungLabel(m) === rungLabel(n));
-      const at = same.indexOf(n);
-      const which = same.length < 2 ? ''
-        : same.length === 2 ? (at === 0 ? ' (the earlier one)' : ' (the later one)')
-        : ` (the ${['first', 'second', 'third', 'fourth', 'fifth', 'sixth'][at] || 'next'} of them)`;
-      return `<option value="${n}">${rungLabel(n)}${which}</option>`;
-    }).join('');
-  if (!matches.includes(state.rung)) state.rung = matches[0];
-  pick.value = state.rung;
+  pick.innerHTML = fits.map((g) => `<option value="${g}">${stageLabel(g)}</option>`).join('');
+  /* The stage already chosen is kept while it is still the size typed. A grand
+     prize belongs to two stages, its own as y/y and the next as 0/y, so the
+     counter decides which of the two is tried first. */
+  const card = LADDER[state.rung - 1];
+  const held = [card.stage];
+  if (STAGE_SPANS[card.stage].end === state.rung - 1) held.push(card.stage + 1);
+  if (x === 0) held.reverse();
+  const kept = held.find((h) => fits.includes(h));
+  const g = kept === undefined ? fits[0] : kept;
+  pick.value = g;
 
-  const twin = matches.filter((n) => n !== state.rung
-    && rungLabel(n) === rungLabel(state.rung));
+  // A counter past the end of the stage reads as the end, and says so.
+  const s = STAGE_SPANS[g];
+  const at = Math.min(s.of, x);
+  state.rung = rungAt(g, at);
+  const cap = LADDER[state.rung - 1].cost - 1;
+  if (state.progress > cap) {
+    state.progress = cap;
+    $('rungProgress').value = cap;
+  }
+
+  const now = LADDER[state.rung - 1];
+  const next = STAGE_SPANS[g + 1];
   $('rungNote').textContent =
-    `${num(banked())} lightbulbs collected so far`
-    + (twin.length
-        ? ` · this card appears ${twin.length === 1 ? 'twice' : `${twin.length + 1} times`} on `
-          + `the track, so pick the one your progress matches`
-        : '');
-}
-
-function setRung(n) {
-  state.rung = Math.min(LADDER.length, Math.max(1, Math.floor(Number(n) || 1)));
-  state.progress = Math.min(state.progress, LADDER[state.rung - 1].cost - 1);
-  $('rungProgress').value = state.progress;
-  render();
+    (at === x ? '' : `This stage ends at ${s.of}/${s.of}. `)
+    + (at === s.of && next
+        ? `In game this shows as 0/${next.of}, under ${stageLabel(g + 1)}. `
+        : '')
+    + `Current reward: ${rewardText(now)} for ${num(now.cost)} lightbulbs · `
+    + `${num(banked())} lightbulbs collected`;
 }
 
 /* Both stores hold the whole of `state`, and they are written together: the URL
@@ -1371,8 +1379,8 @@ function setRung(n) {
 
    Writing them from ONE place is what keeps them honest. Scattered through the
    handlers they drifted, because not every change comes from a handler:
-   refreshRungPicker() moves the rung on its own when the typed cost matches a
-   different set of rewards, and nothing was saving that. render() calls this
+   refreshStagePicker() moves the rung on its own when the typed stage counter
+   points at a different reward, and nothing was saving that. render() calls this
    after the picker has settled, so every path persists by construction, the
    first render included, which is also what puts the restored state in the
    address bar rather than leaving it blank until the first click.
@@ -1408,7 +1416,7 @@ function save() {
 function init() {
   const sel = $('sideSelect');
   sel.innerHTML = SIDE_EVENTS
-    .map((e) => `<option value="${e.id}">${e.name}: ${e.material}</option>`)
+    .map((e) => `<option value="${e.id}">${e.mat ? `${e.name}: ${e.material}` : `${e.name} (candy)`}</option>`)
     .join('');
 
   // Guarded like the writes in save(): localStorage throws rather than returning
@@ -1467,7 +1475,11 @@ function init() {
   $('slots').checked = state.slots;
   $('advanced').checked = state.advanced;
   $('pins').value = state.pins;
-  $('rungCost').value = state.rung > 1 || state.progress ? LADDER[state.rung - 1].cost : 0;
+  // Filled in as the event window would read, which for a grand prize is 0 of
+  // the next stage rather than the chart's own y/y.
+  const shown = counterFor(state.rung);
+  $('stageX').value = shown.x;
+  $('stageY').value = shown.of;
   $('rungProgress').value = state.progress;
 
   sel.addEventListener('change', () => {
@@ -1564,7 +1576,6 @@ function init() {
      what else do I collect on the way" for free. Pinballs are offered too, but
      as the total you get to PLAY, which is the number the quest counts. */
   $('goalKey').innerHTML = Object.keys(BUCKETS)
-    .filter((k) => k !== 'unknown')
     .map((k) => `<option value="${k}">${bucketMeta(k).label}</option>`)
     .join('');
   $('goalKey').value = state.goal.key;
@@ -1604,8 +1615,15 @@ function init() {
 
   $('pins').addEventListener('input', (e) => setPins(e.target.value));
   $('slider').addEventListener('input', (e) => setPins(e.target.value));
-  $('rungCost').addEventListener('input', () => { refreshRungPicker(); update(); });
-  $('rungPick').addEventListener('change', (e) => setRung(e.target.value));
+  $('stageX').addEventListener('input', () => update());
+  $('stageY').addEventListener('input', () => update());
+  // Moves to the stage picked; render() then places the typed counter inside it.
+  $('stagePick').addEventListener('change', (e) => {
+    const s = STAGE_SPANS[Number(e.target.value)];
+    if (!s) return;
+    state.rung = s.start + 1;
+    update();
+  });
   $('rungProgress').addEventListener('input', (e) => {
     const cap = LADDER[state.rung - 1].cost - 1;
     state.progress = Math.min(cap, Math.max(0, Math.floor(Number(e.target.value) || 0)));
@@ -1620,7 +1638,8 @@ function init() {
   $('clearAll').addEventListener('click', () => {
     state.rung = 1;
     state.progress = 0;
-    $('rungCost').value = 0;
+    $('stageX').value = LADDER[0].x;
+    $('stageY').value = LADDER[0].of;
     $('rungProgress').value = 0;
     setPins(0);
     update();
@@ -1634,7 +1653,7 @@ function init() {
     setPins(pinsForRung(Number(tr.dataset.n)), Number(tr.dataset.n));
   });
 
-  $('replayLabel').textContent = `Use the pinball rewards from ${TRACK} immediately`;
+  $('replayLabel').textContent = `Replay pinballs from ${TRACK}`;
   $('ladderHeading').textContent = `${TRACK} rewards`;
 
   initWipNotice();

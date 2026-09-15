@@ -15,11 +15,12 @@
    where R(b) is the pinballs the ladder has paid by bulb-total b, so the
    subtraction is the rungs behind you, collected long ago and not yours to play
    again. R only steps
-   at the 18 pinball rungs, so T(k) takes about 19 distinct values. Between two
-   of them nothing can run out, so the distribution over k jumps from one
-   boundary to the next in a single binomial convolution, about 19 convolutions for
-   the whole event, a few milliseconds, and the same answer every time (a
-   sampled one would jitter under the slider).
+   at the 40 pinball rewards (41 without Gold Rush, when one drink reward pays
+   pinballs), so T(k) takes about 41 distinct values. Between two of them
+   nothing can run out, so the distribution over k jumps from one boundary to the
+   next in a single binomial convolution, about 41 convolutions for the whole
+   event, and the same answer every time (a sampled one would jitter under the
+   slider).
    ========================================================================= */
 
 const MACHINE = {
@@ -92,17 +93,39 @@ function binomPmf(n, p) {
   return { lo, p: out };
 }
 
+/* The pinballs one reward pays under a Gold Rush state. Not simply the pinball
+   rewards: one drink reward pays 120 pinballs while Gold Rush is off, so the
+   loop has one more source without it, and the solver and the page have to
+   agree on which. */
+function pinsPaid(step, gold) {
+  const pay = step.res === 'drink' && !gold ? step.off : step;
+  return pay.res === 'pinball' ? pay.qty : 0;
+}
+
+/* Running totals along the ladder: CUM_COST[i] is the lightbulbs through reward
+   i+1, CUM_PINS[gold ? 1 : 0][i] the pinballs it has paid by then. */
+const CUM_COST = [];
+const CUM_PINS = [[], []];
+LADDER.forEach((s, i) => {
+  CUM_COST.push((i ? CUM_COST[i - 1] : 0) + s.cost);
+  for (const g of [0, 1]) CUM_PINS[g].push((i ? CUM_PINS[g][i - 1] : 0) + pinsPaid(s, g === 1));
+});
+
+/* Pinballs the first `r` rewards pay. */
+const pinsThrough = (r, gold) =>
+  (r > 0 ? CUM_PINS[gold ? 1 : 0][Math.min(r, LADDER.length) - 1] : 0);
+
 /* Cumulative pinballs the ladder has paid once `bulbs` have been banked, plus
-   how far down the ladder that is. */
-function ladderReach(bulbs) {
-  let spent = 0, pins = 0, rung = 0;
-  for (let i = 0; i < LADDER.length; i++) {
-    if (spent + LADDER[i].cost > bulbs) break;
-    spent += LADDER[i].cost;
-    rung++;
-    if (LADDER[i].res === 'pinball') pins += LADDER[i].qty;
+   how far down the ladder that is. A binary search over the running totals
+   rather than a walk: the solver asks this for every outcome it retires, and at
+   150 rewards the walk was most of the solve. */
+function ladderReach(bulbs, gold) {
+  let lo = 0, hi = LADDER.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (CUM_COST[mid] <= bulbs) lo = mid + 1; else hi = mid;
   }
-  return { rung, pins };
+  return { rung: lo, pins: pinsThrough(lo, gold) };
 }
 
 /* -> [[k, probability], ...] for the final number of winning launches, for one
@@ -116,20 +139,20 @@ function ladderReach(bulbs) {
    `stretch` is how far the machine's own payback carries what you hold, 1 when
    nothing comes back. It is a parameter rather than a lookup because it is not
    one number: solveLoop() below runs this at several and mixes them. */
-function solveMachine(pins, banked, mult = 1, replay = true, stretch = 1) {
+function solveMachine(pins, banked, mult = 1, replay = true, stretch = 1, gold = false) {
   const m = Math.max(1, Math.floor(mult));
   const bulbsAt = (k) => banked + MACHINE.perHit * m * k;
   /* The ladder's pinballs are credited from where you STAND, not from rung 1.
      `ladderReach(bulbs).pins` is everything the track has ever paid by that
      bulb total, and the rungs behind you were collected and spent long ago, so
-     handing them over again is inventing pinballs: about 4,000 of them at
+     handing them over again is inventing pinballs: about 3,900 of them at
      reward 57. Only what the track pays from here on is playable. */
-  const already = ladderReach(banked).pins;
+  const already = ladderReach(banked, gold).pins;
   // With replay off there is no loop at all: you fire what you hold, and the
   // pinballs the ladder pays are kept rather than played, so the target never
   // moves and the whole thing is one convolution.
   const target = (k) =>
-    Math.floor(((pins + (replay ? ladderReach(bulbsAt(k)).pins - already : 0)) * stretch) / m);
+    Math.floor(((pins + (replay ? ladderReach(bulbsAt(k), gold).pins - already : 0)) * stretch) / m);
 
   /* `live` is dense: live[i] is P(k = lo + i). A Map cost more in hashing than
      the convolution cost in arithmetic, and the run of k values is contiguous
@@ -212,7 +235,7 @@ function solveLoop(pins, banked, mult = 1, replay = true, gold = false, slots = 
   const back = slots ? MACHINE.pinBack[gold ? 'gold' : 'normal'] : { rate: 0, var: 0 };
   const mu = Math.min(0.95, back.rate);
   const mean = 1 / (1 - mu);
-  if (!(back.var > 0) || pins <= 0) return solveMachine(pins, banked, mult, replay, mean);
+  if (!(back.var > 0) || pins <= 0) return solveMachine(pins, banked, mult, replay, mean, gold);
 
   /* The seed is what the payback works on: your own pinballs, plus what the
      track hands back on the way, since those get played and pay slots too. Read
@@ -220,11 +243,11 @@ function solveLoop(pins, banked, mult = 1, replay = true, gold = false, slots = 
      sets how wide the spread is, and a solve to place the width of a spread is
      a solve too many. */
   const m = Math.max(1, Math.floor(mult));
-  const already = ladderReach(banked).pins;
+  const already = ladderReach(banked, gold).pins;
   let played = 0, hand = pins * mean, paid = already;
   for (let i = 0; i < 80 && hand >= 1e-9; i++) {
     played += hand;
-    const R = ladderReach(banked + MACHINE.pBulb * MACHINE.perHit * played);
+    const R = ladderReach(banked + MACHINE.pBulb * MACHINE.perHit * played, gold);
     hand = replay ? (R.pins - paid) * mean : 0;
     paid = R.pins;
   }
@@ -253,7 +276,7 @@ function solveLoop(pins, banked, mult = 1, replay = true, gold = false, slots = 
 
   const mix = new Map();
   NORMAL_POINTS.forEach(({ w }, i) => {
-    for (const [k, pr] of solveMachine(pins, banked, mult, replay, 1 + devs[i] * fix)) {
+    for (const [k, pr] of solveMachine(pins, banked, mult, replay, 1 + devs[i] * fix, gold)) {
       mix.set(k, (mix.get(k) || 0) + w * pr);
     }
   });

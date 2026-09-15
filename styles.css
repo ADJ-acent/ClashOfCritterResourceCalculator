@@ -245,6 +245,24 @@ button.q:hover { color: var(--accent); border-color: var(--accent); }
   max-height: 70vh; overflow-y: auto;
 }
 
+/* Pictures under a help text: the tall event window down the left, and the small
+   event card over the same position entered on this page down the right, which
+   keeps the two columns about level. The text above relies on pre-wrap, which
+   the figures must not inherit. */
+.help-figs {
+  white-space: normal;
+  display: grid; grid-template-columns: 46% 1fr; gap: 10px 12px;
+  margin-top: 12px;
+}
+.help-figs figure { margin: 0; min-width: 0; }
+.help-figs img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--line); border-radius: 6px;
+}
+.help-figs figcaption { margin-top: 4px; font-size: 11px; line-height: 1.35; color: var(--muted); }
+.help-figs .help-game { grid-row: 1 / span 2; }
+.help-figs .help-card img { width: 55%; }
+
 /* ---------- outcome distribution ---------- */
 .dist { margin-top: 22px; }
 .dist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -318,11 +336,13 @@ button.q:hover { color: var(--accent); border-color: var(--accent); }
    the active event ("165 Energy Drinks" vs "Candy"), and an auto table would
    re-measure and slide every column sideways each time it is toggled. */
 table#ladder { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-#ladder th:nth-child(1) { width: 50px; }
-#ladder th:nth-child(3) { width: 70px; }
-#ladder th:nth-child(4) { width: 96px; }
+/* The first column holds up to "150 ✓", which must not spill into the stage. */
+#ladder th:nth-child(1) { width: 60px; }
+#ladder th:nth-child(2) { width: 58px; }
+#ladder th:nth-child(4) { width: 70px; }
+#ladder th:nth-child(5) { width: 96px; }
 /* Wide enough for the header plus its "?", which otherwise wraps. */
-#ladder th:nth-child(5) { width: 92px; }
+#ladder th:nth-child(6) { width: 92px; }
 #ladder td.odds { color: var(--accent); font-weight: 600; }
 #ladder thead th {
   position: sticky; top: 0; z-index: 1;
@@ -345,18 +365,15 @@ table#ladder { width: 100%; border-collapse: collapse; font-size: 13px; table-la
 #ladder tr.cur .rw { color: var(--accent); font-weight: 600; }
 #ladder tr.cur .n::after { content: " ★"; color: var(--accent); }
 #ladder tr.assumed .rw { font-style: italic; }
-/* Rows known to exist past the recorded ladder, with no cost to place them on
-   it. Not clickable, since there is nothing to solve for, and set off from the
-   confirmed rows by a dashed rule where the knowledge stops. */
-#ladder tr.unconfirmed { cursor: default; }
-#ladder tr.unconfirmed td { color: var(--muted); font-style: italic; }
-#ladder tr.unconfirmed:hover td { background: transparent; }
-#ladder tr.unconfirmed.first td { border-top: 2px dashed var(--line); }
-.flag {
-  display: inline-block; min-width: 15px; text-align: center;
-  border: 1px solid var(--line); border-radius: 4px;
-  font-size: 10px; color: var(--muted); cursor: help; font-style: normal;
-}
+/* The stage counter as the game shows it, and a heavier rule where a new stage
+   starts, so the rewards read in the groups the game draws them in. */
+#ladder .st { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#ladder tr.stage-start td { border-top: 2px solid #4a5160; }
+
+/* Preexisting progress: the two halves of x/y, narrow enough to share one row
+   with the slash and the "Grand Prize Progress" hint in the 300px sidebar. */
+input[type=number].stage-num { width: 52px; }
+.slash { color: var(--muted); font-size: 16px; }
 
 .notes { margin: 0; padding-left: 18px; font-size: 12px; color: var(--muted); line-height: 1.7; }
 
@@ -376,7 +393,9 @@ input, button, select, a { touch-action: manipulation; }
 
 /* ---------- mobile ---------- */
 @media (max-width: 760px) {
-  .wrap { padding: 12px; gap: 12px; flex-direction: column; }
+  /* Stretch, or each panel is only as wide as its content and the pinball panel
+     stops short of the results under it. */
+  .wrap { padding: 12px; gap: 12px; flex-direction: column; align-items: stretch; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
   /* `display: contents` dissolves the side wrapper so its two panels become
      items of .wrap and can be ordered around the results: type your pinballs,
@@ -396,10 +415,44 @@ input, button, select, a { touch-action: manipulation; }
   .dist-head { flex-wrap: wrap; }
   .dist-head #distLabel { flex: 1 0 100%; }
   .res-list { background: var(--panel2); }
+  /* The split under a figure ("740 from Tatari Party + 328 from the machine") is
+     a long line, and kept beside the name it squeezed the name to a word per
+     line and pushed the figure off the screen. Here it drops to a line of its own
+     under the whole row: the figure's box dissolves so the figure and the split
+     become items of the row, and the split takes the full width. */
+  .res-row { flex-wrap: wrap; row-gap: 2px; }
+  .res-qty { display: contents; }
+  .res-qty .res-main { flex: 0 0 auto; margin-left: auto; }
+  .res-qty .extra { flex: 1 0 100%; margin-top: 0; white-space: normal; }
+  /* Six columns on a phone: tighter cells and narrower number columns, so the
+     reward keeps enough width to stay on one line. */
+  #ladder th, #ladder td { padding-left: 6px; padding-right: 6px; }
+  #ladder th:nth-child(1) { width: 48px; }
+  #ladder th:nth-child(2) { width: 46px; }
+  #ladder th:nth-child(4) { width: 54px; }
+  #ladder th:nth-child(5) { width: 64px; }
+  #ladder th:nth-child(6) { width: 80px; }
   .stat, .next, .ladder-wrap { background: var(--panel2); }
   input[type=number], select { font-size: 16px; }  /* >=16px stops iOS zoom-on-focus */
   .slider::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
   .slider::-moz-range-thumb { width: 24px; height: 24px; }
+}
+
+/* ---------- small phones ---------- */
+@media (max-width: 480px) {
+  /* Every pixel of side padding is a pixel the rows and the ladder do not get. */
+  .wrap { padding: 8px; gap: 8px; }
+  .panel { padding: 12px; }
+  /* Six columns left the reward a few pixels at 360 wide, crammed into the cost
+     beside it. The running total goes, being the one column worked out from the
+     others, and the rest tighten, which keeps a reward on one line down to 360. */
+  #ladder { font-size: 12px; }
+  #ladder th:nth-child(5), #ladder td:nth-child(5) { display: none; }
+  #ladder th, #ladder td { padding-left: 4px; padding-right: 4px; }
+  #ladder th:nth-child(1) { width: 42px; }
+  #ladder th:nth-child(2) { width: 42px; }
+  #ladder th:nth-child(4) { width: 48px; }
+  #ladder th:nth-child(6) { width: 76px; white-space: nowrap; }
 }
 
 /* The reward a ladder click asked for. Reaching it makes it the last claimed
