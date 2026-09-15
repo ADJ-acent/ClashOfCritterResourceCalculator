@@ -248,16 +248,14 @@ STAGES.forEach((rewards, g) => {
    alone. With no side event running, material rewards pay their candy and the
    machine pays no material at all.
 
-   `icon` is the game's own sprite, pulled from the client's asset bundles. Raft
-   Race used to be Marathon and still borrows its boards sprite until the raft
-   is extracted; Flying Shoes have none yet. */
+   `icon` is the game's own sprite, pulled from the client's asset bundles. */
 const SIDE_EVENTS = [
-  { id: 'raft',     name: 'Raft Race',     material: 'Raft',             mat: 'raft',       per: 1,   icon: 'icons/boards.png' },
+  { id: 'raft',     name: 'Raft Race',     material: 'Raft',             mat: 'raft',       per: 1,   icon: 'icons/raft.png' },
   { id: 'fishing',  name: 'Fishing',       material: 'Fishing Rods',     mat: 'rod',        per: 1,   icon: 'icons/rods.png' },
   { id: 'treasure', name: 'Treasure Hunt', material: 'Iron Pickaxes',    mat: 'pickaxe',    per: 1,   icon: 'icons/pickaxe.png' },
   { id: 'zobo',     name: 'Zobo Shooter',  material: 'Bullet Coins',     mat: 'coins',      per: 100, icon: 'icons/zobo.png' },
   { id: 'farm',     name: 'Cozy Farm',     material: 'Magic Fertilizer', mat: 'fertiliser', per: 2,   icon: 'icons/fertiliser.png' },
-  { id: 'star',     name: 'Marathon Star', material: 'Flying Shoes',     mat: 'shoes',      per: 0,   icon: null },
+  { id: 'star',     name: 'Marathon Star', material: 'Flying Shoes',     mat: 'shoes',      per: 0,   icon: 'icons/shoes.png' },
   { id: 'none',     name: 'No side event', material: 'Material',         mat: null,         per: 0,   icon: null },
 ];
 

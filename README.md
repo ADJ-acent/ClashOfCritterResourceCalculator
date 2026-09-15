@@ -472,14 +472,20 @@ a run of concatenated `UnityFS` bundles whose headers carry a stripped version
 string, so UnityPy needs `FALLBACK_UNITY_VERSION = '2022.3.62f3'` set before
 loading.
 
-The **lightbulb** and **Flying Shoes** have no icon yet, and Raft Race, which was
-Marathon, still borrows the boards sprite until the raft is extracted.
+The **lightbulb** has no icon yet.
 Everything else was found in the client,
 though several were not where their names suggested, zobo coins are
 `txui_item_trap_fraction`, the card pack is `txui_item_ferrule`, boards are
 `txui_item_teamrun` and pickaxes `txui_item_treasurehunt`. Searching by name
 alone would have missed all four; they were picked out by eye from a contact
-sheet of every reward-shaped sprite.
+sheet of every reward-shaped sprite. Flying Shoes are `txui_item_run`. Each is
+cropped to its visible edges and scaled down to at most 128 px on its long side.
+
+The raft is not in `inpackage_aa_1.lpak`. It arrived in the 2026-09-09 patch,
+`files/data/patch/152145/*.GeneralRes.base.InPackageRes.1.lpak`, as
+`txui_item_teamrun_rafting`, beside the boards' `txui_item_teamrun`: Raft Race is
+Marathon's event (`teamrun`) with a new skin. For a later event, list the patch
+folders by date and scan the newest first.
 
 To repeat the extraction: the guest filesystem is a file on the Windows side 
 `Engine\Pie64\Data.vhdx`, readable with `libvhdi-python` + `pytsk3`, and the
@@ -524,8 +530,7 @@ whichever yields more.
   tight spread on the pinballs played and on the material and cans that ride on
   them.
 * The lightbulb has no icon. It is downloaded content, absent from the client's
-  shipped bundles. Flying Shoes have none yet either, and Raft Race borrows the
-  boards sprite from when it was Marathon.
+  shipped bundles.
 
 ## Development
 
