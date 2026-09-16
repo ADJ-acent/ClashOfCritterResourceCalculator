@@ -4,9 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<title>Clash of Critters Lightbulb Reward Calculator</title>
-<meta name="description" content="Clash of Critters calculator for the Tatari Party / Mad Invention / Rebuild lightbulb track. Enter your pinballs to see what they win, or a goal to see how many pinballs it takes." />
+<title>Clash of Critters Reward Calculator</title>
+<meta name="description" content="See what your pinballs can get you in the pinball machine, or how many pinballs an evolution goal takes. For the Tatari Party, Mad Invention and Rebuild reward track." />
 <meta name="theme-color" content="#15171c" />
+<link rel="icon" href="icon.png" type="image/png" />
 
 <!-- One address for the page. State lives in localStorage, not in the query, so
      there is normally nothing to collapse; this still covers an old link that
@@ -15,9 +16,19 @@
 
 <!-- Open Graph (link previews on Discord, Reddit, forums, etc.) -->
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Clash of Critters Resource Calculator" />
-<meta property="og:title" content="Clash of Critters Lightbulb Reward Calculator" />
-<meta property="og:description" content="See what your pinballs win on the Tatari Party lightbulb track, or how many pinballs a goal takes." />
+<meta property="og:site_name" content="Clash of Critters Reward Calculator" />
+<meta property="og:title" content="Clash of Critters Reward Calculator" />
+<meta property="og:description" content="See what your pinballs can get you in the pinball machine, or how many pinballs an evolution goal takes." />
+<meta property="og:url" content="https://adj-acent.github.io/ClashOfCritterResourceCalculator/" />
+<meta property="og:image" content="https://adj-acent.github.io/ClashOfCritterResourceCalculator/icon.png" />
+<meta property="og:image:width" content="512" />
+<meta property="og:image:height" content="512" />
+
+<!-- Twitter / X card -->
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Clash of Critters Reward Calculator" />
+<meta name="twitter:description" content="See what your pinballs can get you in the pinball machine, or how many pinballs an evolution goal takes." />
+<meta name="twitter:image" content="https://adj-acent.github.io/ClashOfCritterResourceCalculator/icon.png" />
 
 <link rel="stylesheet" href="styles.css" />
 </head>
@@ -25,10 +36,10 @@
 
 <header>
   <div class="head-main">
-    <h1>Clash of Critters Lightbulb Reward Calculator
+    <h1>Clash of Critters Reward Calculator
       <button type="button" id="wipBadge" title="About this">work in progress</button>
     </h1>
-    <p>For Tatari Party (also called Mad Invention or Rebuild). Enter your pinballs to see what they win, or enter a goal to see how many pinballs it takes.</p>
+    <p>For Tatari Party (also called Mad Invention or Rebuild). See what your pinballs can get you in the pinball machine, or how many pinballs an evolution goal takes.</p>
   </div>
   <!-- The one way in. The controls used to carry a "?" each; what they said
        belongs here, where someone looking for help looks first. -->
@@ -47,10 +58,13 @@
     <!-- One question asked from either end, so only one of the two is ever an
          input: either you say what you hold and the page says what it wins, or
          you say what you want and the page says what to bring. -->
-    <div class="seg" id="modeRow" role="group" aria-label="Calculation">
-      <button type="button" data-mode="have">Predict Rewards</button>
-      <button type="button" data-mode="want">Predict Pinballs needed</button>
-    </div>
+    <section>
+      <h2>Predict</h2>
+      <div class="seg" id="modeRow" role="group" aria-label="What to predict">
+        <button type="button" data-mode="have">Rewards</button>
+        <button type="button" data-mode="want">Pinballs needed</button>
+      </div>
+    </section>
 
     <section id="haveBox">
       <h2>Pinballs in hand</h2>
@@ -209,7 +223,24 @@
   Fan-made tool. Not affiliated with or endorsed by the game or its publisher.
 </footer>
 
-<div id="helpPop" hidden></div>
+<!-- One help window, opened by every "?". A dialog rather than a popover pinned
+     under the button: the page scrolls out from under a fixed popover and leaves
+     it stranded. -->
+<dialog id="helpDialog" class="help-dialog" tabindex="-1" aria-labelledby="helpTitle">
+  <div class="help-head">
+    <h2 id="helpTitle"></h2>
+    <button type="button" id="helpClose" class="help-x" aria-label="Close help">×</button>
+  </div>
+  <div id="helpBody"></div>
+</dialog>
+
+<!-- Help short enough to sit beside the control it describes. Re-anchored while
+     the page scrolls, which is what the old popover never did: it stayed where
+     it was opened while the control slid away. -->
+<div id="helpPop" hidden>
+  <b id="helpPopTitle"></b>
+  <span id="helpPopBody"></span>
+</div>
 
 <!-- Shown once per browser, and any time from the "work in progress" badge.
      The version in the localStorage key means a later notice fires again. -->

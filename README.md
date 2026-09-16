@@ -1,4 +1,4 @@
-# Clash of Critters, Lightbulb Reward Calculator
+# Clash of Critters, Reward Calculator
 
 A single-page tool for the lightbulb reward track that the game ships under three
 names: **Mad Invention**, **Tatari Party** and **Rebuild**. They are one
@@ -181,9 +181,9 @@ which is worth three more rewards on its own.
 
 ### Working backwards from a goal
 
-The sidebar has two modes, and only one of them is ever an input. **Predict
-Rewards** is the page as it was: you say what you hold, everything else is the
-answer. **Predict Pinballs needed** turns it around: you say what you want, and the
+The sidebar has two modes under a **Predict** heading, and only one of them is
+ever an input. **Rewards** is the page as it was: you say what you hold,
+everything else is the answer. **Pinballs needed** turns it around: you say what you want, and the
 pinballs to bring become the answer, shown as a figure on the right rather than
 typed into a box. That last part is the whole reason for the switch. A number the
 page worked out has no business sitting in a field you can type over, and the two
@@ -200,7 +200,7 @@ quoted are the points where it crosses:
 | *for a 90% chance* | where 9 runs in 10 get there |
 | *for a 10% chance* | where 1 run in 10 does |
 
-**The chart turns around with the question.** In "Predict Pinballs needed" it draws the
+**The chart turns around with the question.** In "Predict: Pinballs needed" it draws the
 distribution of what the goal *takes* rather than of what a pile gives: `P(you
 reach it bringing n)` only ever rises from 0 to 1, which makes it a CDF over the
 pinballs needed, so the requirement is as real a random variable as the haul is
@@ -376,8 +376,20 @@ progress**, which needs its pictures, and **Replay pinballs from Tatari Party**,
 which sits on the checkbox it describes rather than on the heading above it.
 Everything else is behind the large **?** in the header (`HELP.howto` in
 `data.js`). The results still explain themselves where they stand: the chart,
-Next up, the end panel, the ladder's Pinballs column, and the tiles the machine
-feeds.
+Next up, the end panel, the ladder's Pinballs column, and the two tiles with a
+caveat, energy cans and Flying Shoes.
+
+A "?" is answered two ways, and both are titled with the thing they explain. A
+sentence or two opens a **popover** beside the button, where the question was
+asked. A picture, or the whole how-to, opens a **window**, a modal `<dialog>`
+closed by its X, the backdrop, or Escape, because neither fits beside a control.
+
+The popover used to be pinned under its button once and then left behind by the
+first scroll, pointing at nothing. It now re-anchors on every scroll, which it
+has to do in both directions: the sidebar is sticky, so its buttons move when
+the page does not, and the ladder scrolls inside itself. When its button leaves
+the screen it closes, having nothing left to point at. A browser without
+`<dialog>` falls back to the window shown in place, without the backdrop.
 
 ### Where the state lives
 
@@ -437,6 +449,7 @@ before the counter had loaded. The flag lives in `localStorage` on
 | `styles.css` | Palette and shell shared with the Treasure Hunt solver. |
 | `index.html` | Markup. |
 | `icons/` | Reward icons, extracted from the game client's own asset bundles. |
+| `icon.png` | The site's own icon, 512 square: the favicon, and the picture on a shared link. Same wiring as the Treasure Hunt solver. |
 | `help/` | The picture in the "Preexisting progress" help: the event window and small event card, arrows to the box each number goes in. |
 | `scripts/visual-test.sh` | Headless Edge/Chrome screenshots into `.screenshots/`. |
 

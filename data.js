@@ -286,8 +286,8 @@ const HELP = {
   event: 'Material rewards on ' + TRACK + ' pay the material of the side event, in the amounts '
        + 'the game shows for that event. With no side event, they pay candy.\n\n'
        + 'The machine also pays material: 1 raft, fishing rod or iron pickaxe, 2 magic '
-       + 'fertilizer or 100 bullet coins per payout. Flying Shoes from the machine are too rare '
-       + 'to count, so Marathon Star counts only the shoes from the track.',
+       + 'fertilizer or 100 bullet coins per payout. Marathon Star counts only the shoes from '
+       + 'the track.',
 
   gold: 'During Gold Rush, drink rewards pay energy drinks. Without it they pay candy, except '
       + 'one that pays 120 pinballs.\n\n'
@@ -353,9 +353,33 @@ const HELP = {
       + 'pinballs paid back on the way.\n\n'
       + 'A tick means the reward is claimed on the run shown. Click a row to enter its number.',
 
-  machine: 'Two sources: a fixed amount from ' + TRACK + ' rewards, and a varying amount from '
-         + 'the machine, which pays most of it. The range is the machine part.\n\n'
-         + 'The machine pays energy cans only during Gold Rush.',
+  cans: 'Only during Gold Rush. ' + TRACK + ' pays a fixed amount and the machine pays the '
+      + 'rest, so the range is the machine part.\n\n'
+      + 'Not counted: cans from Radish Run star slots.',
+
+  shoes: 'From ' + TRACK + ' rewards only.\n\n'
+       + 'Not counted: shoes from star slots.',
+};
+
+/* The help window's title: what the "?" sits on, so the window names the thing
+   it is explaining instead of saying "Help" every time. */
+const HELP_TITLES = {
+  howto: 'How to use this page',
+  event: 'Active event',
+  gold: 'Gold Rush',
+  pins: 'Pinballs in hand',
+  replay: 'Pinballs won',
+  slots: 'Card Slot and Duel pinballs',
+  launch: 'Launch size',
+  where: 'Preexisting progress',
+  spread: 'Luck',
+  goal: 'Goal',
+  dist: 'Possible outcomes',
+  next: 'Next up',
+  end: 'The end of the track',
+  need: 'Pinballs needed',
+  cans: 'Energy Drinks',
+  shoes: 'Flying Shoes',
 };
 
 /* The picture shown after a help text, as markup. Only "where you are now" has

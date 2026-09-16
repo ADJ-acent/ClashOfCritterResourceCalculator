@@ -1054,12 +1054,19 @@ function renderTotals(r) {
     }
     else sub = `from ${num(count)} ${Math.round(count) === 1 ? 'reward' : 'rewards'}`;
 
+    /* Only the two tiles with a caveat to give: energy cans, and Marathon
+       Star's shoes, which the machine does not pay at all. What the other tiles
+       split into is already spelled out under the number. */
+    const helpKey = key === 'drink' ? 'cans'
+                  : (key === 'material' && state.side.mat === 'shoes') ? 'shoes'
+                  : null;
+
     return `<div class="res-row${has ? '' : ' empty'}">
       ${meta.icon ? `<img class="res-icon" src="${meta.icon}" alt="" />`
                   : '<span class="res-icon"></span>'}
       <div class="res-text">
-        <div class="res-name">${meta.label}${mach
-          ? ' <button type="button" class="q" data-help="machine" aria-label="What is this?">?</button>'
+        <div class="res-name">${meta.label}${helpKey
+          ? ` <button type="button" class="q" data-help="${helpKey}" aria-label="What is this?">?</button>`
           : ''}</div>
         <div class="res-sub">${sub}</div>
       </div>
@@ -1139,41 +1146,47 @@ function renderLadder(r) {
   smoothOnce = false;
 }
 
-/* ---------- help popovers ---------------------------------------------------
-   A "?" next to anything that needs a sentence. Fixed-position, so opening one
-   never moves the page, and it closes on the next click or Escape. */
+/* ---------- help ---------------------------------------------------------------
+   A "?" next to anything that needs a sentence, answered two ways. A sentence
+   or two opens a popover beside the button, which is where the question was
+   asked and so where the answer reads best. A picture, or the whole how-to,
+   opens the window instead, because neither fits beside a control.
+
+   The popover is the part with a history: pinned under its button and then left
+   behind by the first scroll, pointing at nothing. It now re-anchors while the
+   page scrolls and gives up when its button leaves the screen. The window
+   closes on its X, on the backdrop, or on Escape, which a modal handles itself. */
 
 function initHelp() {
+  const dlg = $('helpDialog');
+  const body = $('helpBody');
   const pop = $('helpPop');
+  let anchor = null;                  // the "?" the popover is pinned to
 
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('button.q[data-help]');
-    if (!btn) {
-      if (!e.target.closest('#helpPop')) pop.hidden = true;
-      return;
-    }
-    const text = HELP[btn.dataset.help];
-    if (!text) return;
-    // A "?" can sit inside a <label>, where a plain click would also flip the
-    // checkbox it labels. Asking what a switch does is not asking to flip it.
-    e.preventDefault();
-    if (!pop.hidden && pop.dataset.for === btn.dataset.help) {
-      pop.hidden = true;                       // clicking the same ? closes it
-      return;
-    }
-    pop.textContent = text;
-    // Pictures go under the text, and widen the popover to give them room.
-    const figs = HELP_FIGURES[btn.dataset.help];
-    if (figs) pop.insertAdjacentHTML('beforeend', figs);
-    pop.dataset.for = btn.dataset.help;
-    pop.hidden = false;
+  // A browser without <dialog> still gets the text, just without the backdrop.
+  const open = () => {
+    if (typeof dlg.showModal === 'function') {
+      if (!dlg.open) dlg.showModal();
+      // Otherwise the X opens focused, wearing a ring that reads as pressed.
+      dlg.focus();
+    } else dlg.setAttribute('open', '');
+  };
+  const close = () => {
+    if (typeof dlg.close === 'function') dlg.close();
+    else dlg.removeAttribute('open');
+  };
+  const hidePop = () => { pop.hidden = true; anchor = null; };
 
-    // Anchor under the button, then pull back inside the viewport.
-    const b = btn.getBoundingClientRect();
-    const w = Math.min(figs ? 440 : 320, window.innerWidth - 20);
+  /* Under the "?", pulled back inside the viewport. Re-run on every scroll, so
+     the popover tracks its button: the sidebar is sticky and the ladder scrolls
+     inside itself, so a position worked out once goes stale either way. */
+  const placePop = () => {
+    if (!anchor) return;
+    const b = anchor.getBoundingClientRect();
+    // The button has scrolled out of sight, so there is nothing left to point at.
+    if (b.bottom < 0 || b.top > window.innerHeight) { hidePop(); return; }
+    const w = Math.min(320, window.innerWidth - 20);
     pop.style.width = w + 'px';
-    // Pictures make it tall, so it may use more of the screen before it scrolls.
-    pop.style.maxHeight = figs ? '90vh' : '';
     let left = b.left;
     if (left + w > window.innerWidth - 10) left = window.innerWidth - w - 10;
     pop.style.left = Math.max(10, left) + 'px';
@@ -1181,10 +1194,58 @@ function initHelp() {
     pop.style.top = (below + pop.offsetHeight > window.innerHeight - 10
       ? Math.max(10, b.top - pop.offsetHeight - 8)
       : below) + 'px';
+  };
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('button.q[data-help]');
+    if (!btn) {
+      if (!e.target.closest('#helpPop')) hidePop();
+      return;
+    }
+    const key = btn.dataset.help;
+    const text = HELP[key];
+    if (!text) return;
+    // A "?" can sit inside a <label>, where a plain click would also flip the
+    // checkbox it labels. Asking what a switch does is not asking to flip it.
+    e.preventDefault();
+    // Named after what it explains, so it says which "?" opened it.
+    const title = HELP_TITLES[key] || 'Help';
+
+    /* A picture, or the whole how-to, needs more room than a popover beside a
+       control can give, so those open the window. Everything else is a sentence
+       or two and reads better where it was asked. */
+    if (key === 'howto' || HELP_FIGURES[key]) {
+      hidePop();
+      $('helpTitle').textContent = title;
+      body.textContent = text;
+      const figs = HELP_FIGURES[key];              // pictures go under the text
+      if (figs) body.insertAdjacentHTML('beforeend', figs);
+      dlg.dataset.for = key;
+      open();
+      return;
+    }
+
+    if (!pop.hidden && anchor === btn) { hidePop(); return; }  // same ? closes it
+    $('helpPopTitle').textContent = title;
+    $('helpPopBody').textContent = text;
+    pop.dataset.for = key;
+    anchor = btn;
+    pop.hidden = false;
+    placePop();
   });
 
+  // Capture, because the ladder and the results scroll inside themselves.
+  window.addEventListener('scroll', () => { if (!pop.hidden) placePop(); }, true);
+  window.addEventListener('resize', () => { if (!pop.hidden) placePop(); });
+
+  $('helpClose').addEventListener('click', close);
+  // A click on the backdrop lands on the dialog itself, never on its contents.
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') pop.hidden = true;
+    if (e.key !== 'Escape') return;
+    hidePop();
+    // Escape is the dialog's own, except on the fallback path above.
+    if (typeof dlg.showModal !== 'function') close();
   });
 }
 
