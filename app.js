@@ -619,8 +619,21 @@ function goalSolve(key, want) {
      both numbers: what you asked for, and the ceiling it is showing you. A bare
      "not possible" leaves the rest of the page describing whatever pinballs
      happened to be in the box, which is an answer to no question at all. */
+  /* Only some buckets have a ceiling. The track pays a finite number of Catch
+     Tatari, card packs and the rest, so asking past that is answered with all
+     there is. Material, cans during Gold Rush, and pinballs played are not like
+     that: they keep coming with every launch, so there is no ceiling to hit and
+     `amountOf(GOAL_CAP)` is only as far as this page solves. Solving for that
+     figure exactly also sits on the boundary the search gives up at, which is
+     how "showing the pinballs for 170,292" ended up beside "none left". */
+  const unbounded = machineShare(key).p > 0 || key === 'pinball';
   const ceiling = Math.floor(amountOf(GOAL_CAP, key));
   const capped = ceiling < want;
+  if (capped && unbounded) {
+    const out = { possible: false, beyondCap: true, want, ceiling, pins: null, rung: state.rung };
+    goalCache = { sig, out };
+    return out;
+  }
   const target = capped ? ceiling : want;
   const out = Object.assign(
     { possible: !capped, want, ceiling },
@@ -730,7 +743,7 @@ function renderSummary(r) {
   /* Asking for more than is left is answered rather than refused, so every
      figure below is for a smaller number than the one asked for. That belongs
      with the figures, not only beside the input that was typed. */
-  if (goal && !goal.possible && goal.ceiling > 0) {
+  if (goal && !goal.possible && goal.pins != null && goal.ceiling > 0) {
     const gm = bucketMeta(state.goal.key);
     bits.unshift(`<div class="warn">Only ${num(goal.ceiling)} ${gm.short || gm.label} left on `
       + `${TRACK}. Showing the pinballs to claim all ${num(goal.ceiling)}.</div>`);
@@ -1317,7 +1330,14 @@ function applyGoal() {
     // "no more" alone would read as the track having run dry.
     state.pins = 0;
     $('goalNote').textContent =
-      key === 'drink' && !state.goldRush ? 'Drink rewards pay energy drinks only during Gold Rush.'
+      // "Pinballs" there means pinballs played, which the pile buys rather than
+      // is, so that one names both sides instead of the same word twice.
+      g.beyondCap ? (key === 'pinball'
+        ? `More than this page solves: up to about ${num(g.ceiling)} played, `
+          + `from ${num(GOAL_CAP)} of your own.`
+        : `More than this page solves: up to about ${num(g.ceiling)} ${name}, `
+          + `which takes ${num(GOAL_CAP)} pinballs.`)
+      : key === 'drink' && !state.goldRush ? 'Drink rewards pay energy drinks only during Gold Rush.'
       : key === 'material' && !state.side.mat ? 'With no side event, material rewards pay candy.'
       : `No ${name} left on ${TRACK} from here.`;
     return;
