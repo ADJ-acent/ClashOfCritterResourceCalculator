@@ -423,8 +423,8 @@ const HELP_FIGURES = {
 
 /* What the source chart could not settle, or where it disagreed with earlier
    recordings. Kept for us, not shown on the page: these are notes on the data's
-   provenance, not something a player needs. The same list is in the README under
-   "Known gaps". */
+   provenance, not something a player needs. The same list is in docs/ARCHITECTURE.md
+   under "Known gaps". */
 const DATA_NOTES = [
   'The ladder is the full chart: 150 rewards in 13 stages, with the stage counter, every candy amount and every event material printed.',
   'Material amounts are stored as printed per event. They sit near 1 raft = 1 rod = 1 pickaxe = 2 fertilizer = 100 bullet coins, but not on it (4,920 and 4,900 bullet coins where 5,000 would fit, 495 fertilizer for 250 rafts), and Flying Shoes follow no rate at all.',

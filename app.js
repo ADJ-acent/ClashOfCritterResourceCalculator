@@ -799,7 +799,7 @@ function renderSummary(r) {
            shortfall is the actionable number and holds still, because it depends
            on the pinballs you hold rather than on how the page is being read.
            Per-reward odds still live in the ladder's Chance column. */
-        short > 0 ? ` · <b class="odds">${num(short)} more pinballs for a 50% chance</b>` : ''
+        short > 0 ? ` · <b class="odds">${num(short)} more pinballs for a 50% chance of reaching it</b>` : ''
       }</div>
     </div>`);
   } else {
