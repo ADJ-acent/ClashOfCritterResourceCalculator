@@ -393,8 +393,14 @@ function amountOf(pins, key) {
   const y = yieldOf(pins);
   if (key === 'pinball') return y.played;          // total played, not net
   const haul = haulSince(cumulativeHaul(), state.rung - 1, y.rung)[key];
+  /* `sh.p` is the chance a launch pays this GIVEN it missed the lightbulbs,
+     which is how compute() and pGoal() use it, against the launches that missed.
+     Here it multiplies every ball played, so the condition has to be put back or
+     the figure reads about a third high: that is what set this goal's ceiling
+     above anything the search could actually reach, so asking for an amount
+     between the two was called reachable and then answered with nothing. */
   const sh = machineShare(key);
-  return haul.qty + y.played * sh.p * sh.per;
+  return haul.qty + y.played * (1 - MACHINE.pBulb) * sh.p * sh.per;
 }
 
 const GOAL_CAP = 500000;   // past any real pile; only used to detect "impossible"
@@ -743,10 +749,19 @@ function renderSummary(r) {
   /* Asking for more than is left is answered rather than refused, so every
      figure below is for a smaller number than the one asked for. That belongs
      with the figures, not only beside the input that was typed. */
-  if (goal && !goal.possible && goal.pins != null && goal.ceiling > 0) {
+  if (goal && !goal.possible && goal.ceiling > 0 && (goal.beyondCap || goal.pins != null)) {
     const gm = bucketMeta(state.goal.key);
-    bits.unshift(`<div class="warn">Only ${num(goal.ceiling)} ${gm.short || gm.label} left on `
-      + `${TRACK}. Showing the pinballs to claim all ${num(goal.ceiling)}.</div>`);
+    const gname = gm.short || gm.label;
+    bits.unshift(`<div class="warn">${
+      goal.beyondCap
+        ? (state.goal.key === 'pinball'
+            ? `More than this page solves. It goes up to about ${num(goal.ceiling)} played, `
+              + `from ${num(GOAL_CAP)} of your own.`
+            : `More than this page solves. It goes up to about ${num(goal.ceiling)} ${gname}, `
+              + `which takes ${num(GOAL_CAP)} pinballs.`)
+        : `Only ${num(goal.ceiling)} ${gname} left on ${TRACK}. `
+          + `Showing the pinballs to claim all ${num(goal.ceiling)}.`
+    }</div>`);
   }
 
   if (goal && goal.pins != null) {
@@ -1330,13 +1345,7 @@ function applyGoal() {
     // "no more" alone would read as the track having run dry.
     state.pins = 0;
     $('goalNote').textContent =
-      // "Pinballs" there means pinballs played, which the pile buys rather than
-      // is, so that one names both sides instead of the same word twice.
-      g.beyondCap ? (key === 'pinball'
-        ? `More than this page solves: up to about ${num(g.ceiling)} played, `
-          + `from ${num(GOAL_CAP)} of your own.`
-        : `More than this page solves: up to about ${num(g.ceiling)} ${name}, `
-          + `which takes ${num(GOAL_CAP)} pinballs.`)
+      g.beyondCap ? 'Past what this page solves.'
       : key === 'drink' && !state.goldRush ? 'Drink rewards pay energy drinks only during Gold Rush.'
       : key === 'material' && !state.side.mat ? 'With no side event, material rewards pay candy.'
       : `No ${name} left on ${TRACK} from here.`;
