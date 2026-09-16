@@ -36,7 +36,7 @@ const TRACK = 'Tatari Party';
 
 /* Where to send a correction. TODO: fill in the Discord invite. Empty until
    then, and the help text says a link is coming rather than pointing nowhere. */
-const COMMUNITY = '';
+const COMMUNITY = 'https://discord.com/channels/1343763804349267989/1517044316177039502';
 
 /* A material reward's amounts, in the chart's own order: Flying Shoes / Iron
    Pickaxe / Raft / Fishing Rod / Bullet Coins / Magic Fertilizer. */
@@ -276,13 +276,10 @@ const BUCKETS = {
 /* Text behind each "?" button. Anything that needs a sentence to be honest
    lives here rather than as a permanent paragraph on the page. */
 const HELP = {
-  /* TODO: write this. It is what the header's big "?" opens, and the only help
-     a first-time reader is offered, now that the controls carry none. The
-     entries below with no button left (event, gold, pins, slots, launch,
-     spread, goal) are kept as the source to write it from, and can go once it
-     is written. */
-  howto: 'Being written.',
-
+  /* The how-to is markup rather than text, in HELP_HTML below, because its
+     pictures belong between the steps instead of after them. The entries here
+     with no "?" left (event, gold, pins, slots, launch, spread, goal) are kept
+     for reference and shown nowhere. */
   event: 'Material rewards on ' + TRACK + ' pay the material of the side event, in the amounts '
        + 'the game shows for that event. With no side event, they pay candy.\n\n'
        + 'The machine also pays material: 1 raft, fishing rod or iron pickaxe, 2 magic '
@@ -359,6 +356,34 @@ const HELP = {
 
   shoes: 'From ' + TRACK + ' rewards only.\n\n'
        + 'Not counted: shoes from star slots.',
+};
+
+/* Help whose pictures sit between its paragraphs, so it is markup rather than
+   text. Only the how-to, which the "?" in the header opens. Width and height are
+   each file's own, so the window is laid out before the pictures arrive. */
+const HELP_HTML = {
+  howto: '<p>This calculator shows what your pinballs will get you from the pinball machine '
+       + 'and ' + TRACK + ' (also called Mad Invention or Rebuild). It can also work backwards '
+       + 'and tell you how many pinballs a goal takes, like 6,000 fishing rods or 20,000 '
+       + 'pinballs used.</p>'
+
+       + '<p>Pick which one you want under <b>Predict</b>.</p>'
+       + '<figure class="help-step"><img src="help/howto-predict.png" width="459" height="117" '
+       + 'alt="The Predict switch, set to Rewards rather than Pinballs needed" /></figure>'
+
+       + '<p>The rest of the settings are mostly self explanatory. Set them to match your '
+       + 'game, then enter the pinballs you have, or the goal you want.</p>'
+
+       + '<p><b>Show ranges</b> adds the range each number can land in, instead of just the '
+       + 'average. It takes longer to work out, so turn it off if the page feels slow.</p>'
+       + '<figure class="help-step"><img src="help/howto-ranges.png" width="367" height="111" '
+       + 'alt="The Luck section, with Show ranges ticked and the outcomes chart unticked" /></figure>'
+
+       + '<p>Already partway through ' + TRACK + '? Enter where you are under <b>Preexisting '
+       + 'progress</b>. The "?" next to it shows which number goes where.</p>'
+       + '<figure class="help-step"><img src="help/howto-progress.png" width="436" height="294" '
+       + 'alt="The Preexisting progress section: Grand Prize Progress, the grand prize picker, '
+       + 'and the lightbulbs on the progress bar" /></figure>',
 };
 
 /* The help window's title: what the "?" sits on, so the window names the thing

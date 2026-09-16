@@ -36,9 +36,7 @@
 
 <header>
   <div class="head-main">
-    <h1>Clash of Critters Reward Calculator
-      <button type="button" id="wipBadge" title="About this">work in progress</button>
-    </h1>
+    <h1>Clash of Critters Reward Calculator</h1>
     <p>For Tatari Party (also called Mad Invention or Rebuild). See what your pinballs can get you in the pinball machine, or how many pinballs an evolution goal takes.</p>
   </div>
   <!-- The one way in. The controls used to carry a "?" each; what they said
@@ -219,7 +217,10 @@
 
 <footer>
   © 2026 Andy Jiang ·
-  <a href="https://adj-acent.github.io/ClashOfCritterTreasureHuntSolver/" target="_blank" rel="noopener">Treasure Hunt Solver</a><br>
+  <a href="https://adj-acent.github.io/ClashOfCritterTreasureHuntSolver/" target="_blank" rel="noopener">Treasure Hunt Solver</a> ·
+  Source code: <a href="https://github.com/adj-acent/ClashOfCritterResourceCalculator" target="_blank" rel="noopener">GitHub</a> ·
+  <a href="https://discord.com/channels/1343763804349267989/1517044316177039502" target="_blank" rel="noopener" title="Leave feedback, bugs, or suggestions">Feedback</a> ·
+  <a href="https://github.com/adj-acent/ClashOfCritterResourceCalculator/blob/main/LICENSE" target="_blank" rel="noopener">Non-commercial use only. PolyForm-NC&nbsp;1.0.0</a><br>
   Fan-made tool. Not affiliated with or endorsed by the game or its publisher.
 </footer>
 
@@ -241,17 +242,6 @@
   <b id="helpPopTitle"></b>
   <span id="helpPopBody"></span>
 </div>
-
-<!-- Shown once per browser, and any time from the "work in progress" badge.
-     The version in the localStorage key means a later notice fires again. -->
-<dialog id="wipDialog" class="wip-dialog" aria-labelledby="wipTitle">
-  <h2 id="wipTitle">Work in progress</h2>
-  <p>The numbers are estimates, and the layout may change.</p>
-  <p>If something looks wrong, check back later.</p>
-  <div class="wip-actions">
-    <button id="wipClose" type="button" class="primary">OK</button>
-  </div>
-</dialog>
 
 <script src="data.js"></script>
 <script src="machine.js"></script>

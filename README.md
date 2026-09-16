@@ -411,11 +411,9 @@ A query is still **read** once on arrival, if there is one, so `visual-test.sh`
 can start the page in a given state (`QUERY=`, under Development). It is cleared
 from the address bar straight after, and nothing ever writes one.
 
-Also stored in one place only: the work in progress notice, a per browser fact
-rather than part of a result (`coc.rc.seenWip.1`; bump the suffix to show it
-again). The point being read off the distribution is in neither, deliberately: it
-is reset by `update()`, since a point dragged out of one distribution says
-nothing about the next.
+The point being read off the distribution is stored nowhere, deliberately: it is
+reset by `update()`, since a point dragged out of one distribution says nothing
+about the next.
 
 `save()` is called from `render()` rather than from the input handlers, because
 not every change comes from a handler. Typing a stage counter can move the rung

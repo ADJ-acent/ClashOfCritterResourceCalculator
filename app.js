@@ -725,6 +725,16 @@ function renderSummary(r) {
      the even-chance one, the same "typical run" every other number here is. */
   const goal = state.mode === 'want' && state.goal.want > 0
     ? goalSolve(state.goal.key, state.goal.want) : null;
+
+  /* Asking for more than is left is answered rather than refused, so every
+     figure below is for a smaller number than the one asked for. That belongs
+     with the figures, not only beside the input that was typed. */
+  if (goal && !goal.possible && goal.ceiling > 0) {
+    const gm = bucketMeta(state.goal.key);
+    bits.unshift(`<div class="warn">Only ${num(goal.ceiling)} ${gm.short || gm.label} left on `
+      + `${TRACK}. Showing the pinballs to claim all ${num(goal.ceiling)}.</div>`);
+  }
+
   if (goal && goal.pins != null) {
     tiles.push(`<div class="stat"><b>${num(state.pins)}</b>
       <span>pinballs needed${Math.abs(state.pctl - 0.5) <= 0.02 ? ', 50% chance' : ''}</span>
@@ -1204,7 +1214,8 @@ function initHelp() {
     }
     const key = btn.dataset.help;
     const text = HELP[key];
-    if (!text) return;
+    const html = HELP_HTML[key];
+    if (!text && !html) return;
     // A "?" can sit inside a <label>, where a plain click would also flip the
     // checkbox it labels. Asking what a switch does is not asking to flip it.
     e.preventDefault();
@@ -1214,12 +1225,18 @@ function initHelp() {
     /* A picture, or the whole how-to, needs more room than a popover beside a
        control can give, so those open the window. Everything else is a sentence
        or two and reads better where it was asked. */
-    if (key === 'howto' || HELP_FIGURES[key]) {
+    if (html || HELP_FIGURES[key]) {
       hidePop();
       $('helpTitle').textContent = title;
-      body.textContent = text;
-      const figs = HELP_FIGURES[key];              // pictures go under the text
-      if (figs) body.insertAdjacentHTML('beforeend', figs);
+      // Markup comes from data.js, never from anything a reader can set.
+      if (html) {
+        body.innerHTML = html;
+      } else {
+        body.textContent = text;
+        const figs = HELP_FIGURES[key];            // pictures go under the text
+        if (figs) body.insertAdjacentHTML('beforeend', figs);
+      }
+      body.classList.toggle('as-html', !!html);
       dlg.dataset.for = key;
       open();
       return;
@@ -1246,31 +1263,6 @@ function initHelp() {
     hidePop();
     // Escape is the dialog's own, except on the fallback path above.
     if (typeof dlg.showModal !== 'function') close();
-  });
-}
-
-/* ---------- work in progress notice ------------------------------------------
-   Opens once per browser, and any time from the badge in the header. The
-   version sits in the key so a later notice fires again for people who already
-   dismissed this one. */
-
-const WIP_SEEN = 'coc.rc.seenWip.1';
-
-function initWipNotice() {
-  const dlg = $('wipDialog');
-  const open = () => {
-    if (typeof dlg.showModal === 'function' && !dlg.open) dlg.showModal();
-  };
-
-  let seen = null;
-  try { seen = localStorage.getItem(WIP_SEEN); } catch (_) { seen = null; }
-  if (seen !== '1') open();
-
-  $('wipBadge').addEventListener('click', open);
-  $('wipClose').addEventListener('click', () => {
-    dlg.close();
-    // A private window can refuse to store, and the notice is not worth an error.
-    try { localStorage.setItem(WIP_SEEN, '1'); } catch (_) { /* shown again next time */ }
   });
 }
 
@@ -1337,11 +1329,12 @@ function applyGoal() {
      a card, not its place in a list, so "reward 33 of 150" names something no
      player can see, while "33 rewards" is something they watch tick up. */
   const claims = Math.max(0, g.rung - (state.rung - 1));
-  $('goalNote').textContent = g.possible
-    ? `Claims ${num(claims)} ${claims === 1 ? 'reward' : 'rewards'} on the way`
-      + (key === 'pinball' ? `, ${num(want)} pinballs played` : '')
-    : `Only ${num(g.ceiling)} ${name} left on ${TRACK}. `
-      + `Showing the pinballs to claim all ${num(g.ceiling)}.`;
+  /* What the run collects on the way. When the goal was capped, why the answer
+     is for a different number is said above the figures instead (renderSummary),
+     where the figures it changes actually are. */
+  $('goalNote').textContent =
+    `Claims ${num(claims)} ${claims === 1 ? 'reward' : 'rewards'} on the way`
+    + (g.possible && key === 'pinball' ? `, ${num(want)} pinballs played` : '');
 }
 
 /* ---------- "where am I" -----------------------------------------------------
@@ -1740,7 +1733,6 @@ function init() {
   $('replayLabel').textContent = `Replay pinballs from ${TRACK}`;
   $('ladderHeading').textContent = `${TRACK} rewards`;
 
-  initWipNotice();
   initHelp();
   render();
 }
