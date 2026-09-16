@@ -1236,7 +1236,7 @@ function initHelp() {
   };
 
   document.addEventListener('click', (e) => {
-    const btn = e.target.closest('button.q[data-help]');
+    const btn = e.target.closest('button[data-help]');
     if (!btn) {
       if (!e.target.closest('#helpPop')) hidePop();
       return;

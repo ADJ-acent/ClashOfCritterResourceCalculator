@@ -445,6 +445,13 @@ footer {
   border-top: 1px solid var(--line);
 }
 footer a { color: var(--accent); }
+/* A footer link that opens help rather than a page, so it is a button wearing
+   the look of its neighbours. */
+footer button {
+  background: none; border: none; padding: 0;
+  font: inherit; color: var(--accent);
+  text-decoration: underline; cursor: pointer;
+}
 
 input, button, select, a { touch-action: manipulation; }
 

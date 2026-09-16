@@ -36,7 +36,7 @@ const TRACK = 'Tatari Party';
 
 /* Where to send a correction. TODO: fill in the Discord invite. Empty until
    then, and the help text says a link is coming rather than pointing nowhere. */
-const COMMUNITY = 'https://discord.com/channels/1343763804349267989/1517044316177039502';
+const COMMUNITY = 'https://discord.com/channels/1343763804349267989/1549589087495786547';
 
 /* A material reward's amounts, in the chart's own order: Flying Shoes / Iron
    Pickaxe / Raft / Fishing Rod / Bullet Coins / Magic Fertilizer. */
@@ -350,6 +350,9 @@ const HELP = {
       + 'pinballs paid back on the way.\n\n'
       + 'A tick means the reward is claimed on the run shown. Click a row to enter its number.',
 
+  credits: 'Thanks to Militsa, and to everyone else who helped me collect the '
+         + TRACK + ' data.',
+
   cans: 'Only during Gold Rush. ' + TRACK + ' pays a fixed amount and the machine pays the '
       + 'rest, so the range is the machine part.\n\n'
       + 'Not counted: cans from Radish Run star slots.',
@@ -403,6 +406,7 @@ const HELP_TITLES = {
   next: 'Next up',
   end: 'The end of the track',
   need: 'Pinballs needed',
+  credits: 'Credits',
   cans: 'Energy Drinks',
   shoes: 'Flying Shoes',
 };
