@@ -674,6 +674,7 @@ function render() {
   // First, because the picker's note names a reward, which the side event and
   // Gold Rush rename, and because it settles which rung we are on.
   refreshStagePicker();
+  refreshGoalKeys();
   applyGoal();
   save();
 
@@ -1472,6 +1473,20 @@ function save() {
     localStorage.setItem(LS.goalAmt, state.goal.want);
     localStorage.setItem(LS.goalKey, state.goal.key);
   } catch (_) { /* private mode: this browser simply does not come back */ }
+}
+
+/* The material bucket is named by the side event, so the goal picker's own
+   label goes stale the moment the event changes: pick Raft, switch to Fishing,
+   and the goal still reads Raft while the answer beneath it is already about
+   fishing rods. The options are built once and renamed on every render, since
+   what moves is the name rather than the choice. */
+function refreshGoalKeys() {
+  const sel = $('goalKey');
+  for (const opt of sel.options) {
+    const label = bucketMeta(opt.value).label;
+    if (opt.textContent !== label) opt.textContent = label;
+  }
+  if (sel.value !== state.goal.key) sel.value = state.goal.key;
 }
 
 function init() {
