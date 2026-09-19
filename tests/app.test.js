@@ -4,6 +4,7 @@
 
    Run with: npm test  (node --test) */
 const test = require('node:test');
+const { after } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -51,8 +52,16 @@ async function boot({ storage, query = '' } = {}) {
   if (window.document.readyState === 'loading') {
     await new Promise((done) => window.document.addEventListener('DOMContentLoaded', done, { once: true }));
   }
+  open.push(window);
   return { window, doc: window.document, errors };
 }
+
+/* Closed at the end of the run, not left to the garbage collector. The page
+   debounces typing into the goal box, so a window left open can fire a timer
+   into a page the test has finished with, which fails a later test instead of
+   this one. */
+const open = [];
+after(() => { for (const w of open) w.close(); });
 
 // Minimal in-memory Storage, kept across boot() calls to act as a refresh.
 function makeStorage() {
@@ -108,33 +117,75 @@ test('a fresh page holds nothing and is in "what do I get" mode', async () => {
 
 /* ---------- what the page works out --------------------------------------- */
 
-/* The sum the whole pinball account rests on. Two things hand pinballs back and
-   a launch too small to fire strands the rest, so if these do not add up the
-   page is inventing or losing balls. Whole numbers, at every launch size. */
+/* The sum the whole pinball account rests on: two things hand pinballs back and
+   a launch too small to fire strands the rest.
+
+   The sum ALONE proves nothing, because compute() defines the machine's share
+   as whatever is left over after yours and the track, so it balances however
+   wrong the pile is. So the parts are pinned as numbers, and the machine's
+   share is checked against the rate it is supposed to pay, which is the figure
+   the sum cannot police. */
 test('yours + track + machine = played + left over', async () => {
   const { window } = await boot();
+  const rate = ev(window, 'returnRate(true)');
   for (const mult of [1, 10, 100, 200]) {
-    for (const [replay, slots] of [[true, true], [false, true], [true, false]]) {
-      setState(window, { pins: 12000, mult, replay, slots });
-      const s = ev(window, 'compute().sel');
-      const sum = 12000 + s.fromLadder + s.fromSlots;
-      assert.ok(Math.abs(sum - (s.played + s.stub)) < 1e-6,
-        `x${mult} replay=${replay} slots=${slots}: ${sum} in, ${s.played} played + ${s.stub} stranded`);
-      assert.ok(s.stub >= 0 && s.stub < mult + 1, `the stub is smaller than one launch at x${mult}`);
-    }
+    setState(window, { pins: 12000, mult, replay: true, slots: true, goldRush: true });
+    const s = ev(window, 'compute().sel');
+
+    assert.strictEqual(s.fromLadder, 2140, `the track pays the same at x${mult}`);
+    assert.strictEqual(s.fromSlots, 808, `the machine pays the same at x${mult}`);
+    assert.strictEqual(s.played, { 1: 14948, 10: 14940, 100: 14900, 200: 14800 }[mult],
+      `balls fired at x${mult}`);
+    /* What the machine hands back is the one part the sum cannot police, so it
+       is checked against the rate it is supposed to pay. Against the whole pile
+       rather than against the balls fired: the stub was paid for too, it was
+       just too small to fire, which is why this figure holds still while the
+       balls fired fall with the launch size. */
+    assert.ok(Math.abs(s.fromSlots - (s.played + s.stub) * rate) < 1,
+      `the machine's share is its rate at x${mult}: ${s.fromSlots}`);
+
+    const sum = 12000 + s.fromLadder + s.fromSlots;
+    assert.ok(Math.abs(sum - (s.played + s.stub)) < 1e-6,
+      `x${mult}: ${sum} in, ${s.played} played + ${s.stub} stranded`);
+    assert.ok(Number.isInteger(s.fromSlots) && Number.isInteger(s.played), 'whole balls');
+    // A stub the size of a launch is a launch that should have fired.
+    assert.ok(s.stub >= 0 && s.stub < mult, `the stub is smaller than one launch at x${mult}`);
   }
+
+  // Turning either payback off takes its own term out and leaves the rest alone.
+  setState(window, { pins: 12000, mult: 1, replay: false, slots: true });
+  assert.strictEqual(ev(window, 'compute().sel.fromLadder'), 0, 'no track pinballs with replay off');
+  setState(window, { pins: 12000, mult: 1, replay: true, slots: false });
+  assert.strictEqual(ev(window, 'compute().sel.fromSlots'), 0, 'no machine pinballs with slots off');
 });
 
-// Every quantity the page shows rises with the lightbulb count, which is what
-// lets one quantile of k answer for all of them.
-test('the bands run low to high', async () => {
+/* Every quantity the page shows rises with the lightbulb count, which is what
+   lets one quantile of k answer for all of them.
+
+   Asserted STRICTLY, at a launch size big enough to have a real spread: with
+   "p10 <= p50" a band collapsed onto its median passes, and a collapsed band is
+   exactly how this feature breaks. */
+test('the bands are bands, and run low to high', async () => {
   const { window } = await boot();
   setState(window, { pins: 8000, mult: 100, ranges: true });
   const r = ev(window, `(() => { const r = compute();
     return { b: r.bulbs, g: r.rung, w: r.pinsWon }; })()`);
-  assert.ok(r.b.p10 <= r.b.p50 && r.b.p50 <= r.b.p90, 'lightbulbs');
-  assert.ok(r.g.p10 <= r.g.p50 && r.g.p50 <= r.g.p90, 'rewards claimed');
-  assert.ok(r.w.p10 <= r.w.p90, 'pinballs won');
+  assert.ok(r.b.p10 < r.b.p50 && r.b.p50 < r.b.p90, `lightbulbs ${r.b.p10}/${r.b.p50}/${r.b.p90}`);
+  assert.ok(r.g.p10 < r.g.p50 && r.g.p50 < r.g.p90, `rewards claimed ${r.g.p10}/${r.g.p50}/${r.g.p90}`);
+  assert.ok(r.w.p10 < r.w.p90, `pinballs won ${r.w.p10}/${r.w.p90}`);
+
+  /* And the band widens with the launch size, which is the whole reason the
+     chart and the ranges are worth turning on. ARCHITECTURE quotes the spread
+     on lightbulbs as about +/-2.2% at x1, +/-6.9% at x10 and +/-22% at x100. */
+  const width = (mult) => {
+    setState(window, { pins: 10000, mult, ranges: true });
+    const b = ev(window, 'compute().bulbs');
+    return (b.p90 - b.p10) / 2 / b.p50;
+  };
+  const [w1, w10, w100] = [width(1), width(10), width(100)];
+  assert.ok(w1 < 0.04 && w1 > 0.01, `x1 band is about 2%, got ${(w1 * 100).toFixed(1)}%`);
+  assert.ok(w10 > w1 * 2, `x10 is wider than x1: ${(w10 * 100).toFixed(1)}%`);
+  assert.ok(w100 > 0.15 && w100 > w10 * 2, `x100 is about 22%, got ${(w100 * 100).toFixed(1)}%`);
 });
 
 test('more pinballs never claim fewer rewards', async () => {
@@ -157,8 +208,10 @@ test('clearing the track costs about 270,100 pinballs during Gold Rush', async (
   const gold = ev(window, 'pinsToClear()');
   setState(window, { goldRush: false });
   const plain = ev(window, 'pinsToClear()');
-  assert.ok(Math.abs(gold - 270100) < 2000, `Gold Rush clear is ${gold}, README says about 270,100`);
-  assert.ok(Math.abs(plain - 258100) < 2000, `plain clear is ${plain}, README says about 258,100`);
+  // Exact, not "about": pinsToClear() already rounds up to the nearest 100, so a
+  // band of 2,000 would let the figure drift 0.7% and leave both docs stale.
+  assert.strictEqual(gold, 270100, 'README and ARCHITECTURE say 270,100');
+  assert.strictEqual(plain, 258100, 'README and ARCHITECTURE say 258,100');
 });
 
 test('the pinballs to reach a reward are 0 behind you and real ahead', async () => {
@@ -185,6 +238,97 @@ test('a reward that pays pinballs makes the next one cheaper', async () => {
   // Lightbulbs are the thing that only rises, which is what the solver leans on.
   const cum = ev(window, 'CUM_COST');
   cum.forEach((c, i) => { if (i) assert.ok(c > cum[i - 1], `lightbulbs rise at reward ${i + 1}`); });
+});
+
+/* Material is the biggest bucket on the page and the machine pays almost all of
+   it, so nothing about it falls out of the track data. The split is the thing
+   to check: of the launches that missed the lightbulbs, each pays material with
+   probability .22 / (1 - .255), because one launch pays one reward only. */
+test('the machine pays material on the launches that missed the lightbulbs', async () => {
+  const { window } = await boot();
+  const share = ev(window, "machineShare('material')");
+  assert.ok(Math.abs(share.p - 0.22 / (1 - 0.255)) < 1e-12, 'the exclusivity is put back');
+  assert.strictEqual(share.per, 1, 'one raft per payout');
+
+  /* The figures ARCHITECTURE validated against a 4,000 run Monte Carlo: 10,000
+     pinballs at x1 with the machine's own payback off, 12,076 lightbulbs and
+     about 2,795 material. */
+  setState(window, { pins: 10000, mult: 1, slots: false, replay: true, goldRush: true });
+  const r = ev(window, 'compute()');
+  assert.strictEqual(r.bulbs.p50, 12076, 'the documented median lightbulbs');
+  const material = r.sel.haul.material.qty + r.machine.material.mean;
+  assert.ok(Math.abs(material - 2795) < 5, `documented as about 2,795, got ${material.toFixed(1)}`);
+  assert.ok(r.machine.material.mean > r.sel.haul.material.qty * 10,
+    'and the machine dominates the track, not the other way round');
+});
+
+// Marathon Star is the one event whose material the machine is not counted as
+// paying, so that tile is the track's shoes alone.
+test('Marathon Star gets no material from the machine', async () => {
+  const { window } = await boot();
+  run(window, "$('sideSelect').value = 'star'; $('sideSelect').dispatchEvent(new Event('change', { bubbles: true }));");
+  assert.strictEqual(ev(window, "machineShare('material').p"), 0);
+  setState(window, { pins: 10000 });
+  assert.strictEqual(ev(window, "compute().machine.material"), undefined, 'no machine row at all');
+  assert.ok(ev(window, 'compute().sel.haul.material.qty') > 0, 'the track still pays shoes');
+});
+
+/* The chart is off by default and is a whole render path of its own, so nothing
+   else on the page executes it. Clicking it points the rest of the page at one
+   concrete run rather than at an average. */
+test('the outcomes chart draws, and picking a point moves the page with it', async () => {
+  const { window, doc, errors } = await boot();
+  assert.strictEqual($(doc, 'distBox').hidden, true, 'off by default');
+
+  setState(window, { pins: 10000, mult: 100, advanced: true });
+  assert.strictEqual($(doc, 'distBox').hidden, false);
+  const svg = doc.querySelector('.dist-chart svg');
+  assert.ok(svg && svg.children.length > 2, 'bars were drawn');
+
+  // The picks row reads the page at a chosen run: an unlucky one claims fewer
+  // rewards than a lucky one, and the median sits between them.
+  const pick = (p) => {
+    click(window, doc.querySelector(`.dist-picks button[data-pctl="${p}"]`));
+    return ev(window, 'compute().sel.rung');
+  };
+  const [low, mid, high] = [pick('0.1'), pick('0.5'), pick('0.9')];
+  assert.ok(low < mid && mid < high, `unlucky ${low}, median ${mid}, lucky ${high}`);
+  assert.strictEqual(errors.length, 0, errors.join(String.fromCharCode(10)));
+});
+
+/* In "Pinballs needed" the chart turns around: it draws what the goal TAKES
+   rather than what a pile gives, so the lucky end is the cheap end. */
+test('the chart turns around with the question', async () => {
+  const { window, doc, errors } = await boot();
+  setState(window, { mode: 'want', advanced: true, ranges: true, mult: 100,
+                     goal: { key: 'tatari', want: 300 } });
+  assert.strictEqual($(doc, 'distBox').hidden, false);
+  assert.match($(doc, 'distTitle').textContent, /[Pp]inballs/, 'the title says what it is about now');
+  assert.ok(doc.querySelector('.dist-picks').classList.contains('flip'),
+    'and the picks are reordered so Lucky sits over the lucky side');
+
+  const pick = (p) => {
+    click(window, doc.querySelector(`.dist-picks button[data-pctl="${p}"]`));
+    return ev(window, 'state.pins');
+  };
+  assert.ok(pick('0.9') < pick('0.1'), 'a lucky run needs fewer pinballs, not more');
+  assert.strictEqual(errors.length, 0, errors.join(String.fromCharCode(10)));
+});
+
+/* The whole goal search rests on this: P(you get there) only ever rises with
+   the pinballs you bring, which is what makes it invertible by bisection. */
+test('the chance of reaching a goal only rises with the pinballs brought', async () => {
+  const { window } = await boot();
+  setState(window, { mode: 'want', mult: 100 });
+  let last = -1;
+  for (const pins of [30000, 35000, 40000, 45000, 50000]) {
+    const p = ev(window, `pGoal(${pins}, 'tatari', 300)`);
+    assert.ok(p >= last, `${pins} pinballs is not worse than fewer`);
+    assert.ok(p >= 0 && p <= 1, `${pins} gives a probability`);
+    last = p;
+  }
+  assert.ok(last > 0.9, 'and enough pinballs make it nearly certain');
+  assert.ok(ev(window, "pGoal(30000, 'tatari', 300)") < 0.1, 'while too few nearly never do');
 });
 
 /* ---------- saying where you are ------------------------------------------ */
@@ -243,12 +387,22 @@ test('the pinballs a goal asks for reach the goal', async () => {
   }
 });
 
+/* Strictly apart at x100, where the swing is real. With "<=" a search that
+   returned the headline for all three would pass, which is the way this breaks.
+   At x1 they are allowed to meet: a pinball goal there is very nearly a hard
+   number, and ARCHITECTURE says such a band is dropped rather than printed. */
 test('a surer answer costs more than a luckier one', async () => {
   const { window } = await boot();
   setState(window, { mode: 'want', ranges: true, mult: 100 });
   const g = ev(window, "goalSolve('tatari', 300)");
-  assert.ok(g.lucky <= g.pins && g.pins <= g.sure,
-    `10% ${g.lucky}, 50% ${g.pins}, 90% ${g.sure} should ascend`);
+  assert.ok(g.lucky < g.pins && g.pins < g.sure,
+    `10% ${g.lucky}, 50% ${g.pins}, 90% ${g.sure} should be three different figures`);
+  assert.ok((g.sure - g.lucky) / g.pins > 0.1, `x100 spreads: ${g.lucky} to ${g.sure}`);
+
+  setState(window, { mult: 1 });
+  const one = ev(window, "goalSolve('tatari', 300)");
+  assert.ok((one.sure - one.lucky) / one.pins < (g.sure - g.lucky) / g.pins,
+    'x1 is the tighter question');
 });
 
 /* Asking for more than the track holds is answered rather than refused: the
@@ -374,10 +528,14 @@ test('the goal picker follows the side event', async () => {
 test('every launch size the page offers renders', async () => {
   const { window, doc, errors } = await boot();
   setState(window, { pins: 10000 });
-  for (const b of [...$(doc, 'multRow').children]) {
+  const buttons = [...$(doc, 'multRow').children];
+  assert.strictEqual(buttons.length, ev(window, 'MULTIPLIERS.length'), 'every size has a button');
+  for (const b of buttons) {
     click(window, b);
     assert.strictEqual(ev(window, 'state.mult'), Number(b.dataset.mult));
-    assert.ok($(doc, 'summary').textContent.length > 0, `x${b.dataset.mult} renders`);
+    assert.match($(doc, 'summary').textContent, /lightbulbs/, `x${b.dataset.mult} renders its tiles`);
+    assert.ok(ev(window, 'compute().sel.played') > 0, `x${b.dataset.mult} fires something`);
+    assert.strictEqual(b.classList.contains('sel'), true, `x${b.dataset.mult} shows as picked`);
   }
   assert.strictEqual(errors.length, 0, errors.join('\n'));
 });
@@ -390,7 +548,12 @@ test('every launch size the page offers renders', async () => {
 test('a refresh remembers the goal and forgets where you stand', async () => {
   const storage = makeStorage();
   const first = await boot({ storage });
-  setState(first.window, { mode: 'want', goal: { key: 'card', want: 4 }, rung: 60, progress: 40 });
+  setState(first.window, { mode: 'want', goal: { key: 'card', want: 4 } });
+  // Through the boxes, since assigning state.rung is undone by the next render,
+  // which would leave this test asserting that 1 comes back as 1.
+  standOn(first.window, 60);
+  setState(first.window, { progress: 40 });
+  assert.strictEqual(ev(first.window, 'state.rung'), 60, 'the first page really is standing there');
 
   const again = await boot({ storage });
   assert.strictEqual(ev(again.window, 'state.mode'), 'want');

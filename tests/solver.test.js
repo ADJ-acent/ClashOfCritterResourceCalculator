@@ -30,10 +30,20 @@ const {
 
 /* ---------- the ladder ---------------------------------------------------- */
 
-test('the ladder is 150 rewards in 13 stages', () => {
+/* The sizes are written out rather than read back off the data, because
+   data.js is the file to edit when the chart needs correcting and the spans are
+   BUILT from it: every assertion phrased in terms of STAGE_SPANS restates the
+   construction and survives a reward being dropped or duplicated. This does
+   not. The first stage holds 11 under /10, counting from 0. */
+const STAGE_SIZES = [11, 8, 8, 6, 7, 8, 8, 7, 16, 20, 15, 17, 19];
+
+test('the ladder is 150 rewards in 13 stages of known size', () => {
   assert.strictEqual(LADDER.length, 150);
   assert.strictEqual(STAGES.length, 13);
   assert.strictEqual(STAGE_SPANS.length, 13);
+  // Spread into this realm first: an array from the vm carries its prototype.
+  assert.deepStrictEqual([...STAGES.map((s) => s.length)], STAGE_SIZES);
+  assert.strictEqual(STAGE_SIZES.reduce((a, b) => a + b, 0), 150);
 });
 
 // The stage spans are what every position calculation indexes into, so a gap or
@@ -80,7 +90,10 @@ test('every reward pays a bucket the page has a tile for', () => {
    in one event and be right in the other five. */
 test('every material reward is priced for every side event', () => {
   const keys = SIDE_EVENTS.map((e) => e.mat).filter(Boolean);
-  for (const step of LADDER.filter((s) => s.res === 'material')) {
+  const mats = LADDER.filter((s) => s.res === 'material');
+  assert.strictEqual(keys.length, 6, 'six events pay a material of their own');
+  assert.ok(mats.length > 0, 'and there are material rewards to price');
+  for (const step of mats) {
     for (const k of keys) {
       assert.ok(step.qty[k] > 0, `material reward costing ${step.cost} pays ${k}`);
     }

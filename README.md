@@ -94,7 +94,8 @@ bigger launch keeps the average and widens the spread by its root, that the
 rewards behind you are not paid out twice. `tests/app.test.js` boots the real
 `index.html` in jsdom and drives it through the DOM, including the sum the whole
 pinball account rests on, `yours + track + machine = played + left over`. Both
-run on every push and pull request (`.github/workflows/ci.yml`).
+run on every pull request and on every push to `main`
+(`.github/workflows/ci.yml`).
 
 Layout is still eyeballed, since nothing asserts on pixels. The screenshots
 render headlessly into `.screenshots/`:

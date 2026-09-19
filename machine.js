@@ -228,7 +228,7 @@ const NORMAL_POINTS = [
    The pile is a branching process: every ball played spawns `rate` more on
    average, so what you end up playing from a seed of N has mean N/(1-rate) and
    variance N·var/(1-rate)³, the standard total progeny result, and is normal
-   enough at these counts. So the solve is run at five stretches drawn from that
+   enough at these counts. So the solve is run at three stretches drawn from that
    and mixed. The seed is what has to be paid for, your own pinballs plus what
    the track hands back, taken from a first pass at the average.
 
@@ -267,8 +267,8 @@ function solveLoop(pins, banked, mult = 1, replay = true, gold = false, slots = 
      because what comes back cannot be negative and a normal's lower tail can.
      Cutting it there would quietly hand the average run more than it should
      get: at ×200 the mean payback is a twentieth of the pile and its spread is
-     twice that, so two of the five points fall below zero, and clipping them
-     put 2.6% on every figure. So they are clipped and then rescaled to carry
+     twice that, so the lowest of the three points falls below zero, and
+     clipping it put 2.6% on every figure. So they are clipped and then rescaled to carry
      the average they are supposed to carry, which keeps the mean exact and
      leaves the shape leaning the way the real thing leans, most runs below
      average and a few well above. */

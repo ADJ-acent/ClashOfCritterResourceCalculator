@@ -617,14 +617,37 @@ the position from drifting apart, so a test moves the boxes (`standOn`) the way
 a player does. Values read out of the page are from another realm, so they
 compare by value rather than with `deepStrictEqual`.
 
-The suite pins the two claims that would otherwise go stale in silence: the sum
-`yours + track + machine = played + left over`, at every launch size and with
-either payback switched off, and the ~270,100 pinball clear this file and the
-README both quote. It also pins one property that reads like a bug and is not:
-**the ladder's Pinballs column does not rise**, because a reward that pays
-pinballs funds part of the way to the next one, so reward 2 costs fewer of your
-own than reward 1 does.
+**A test that restates the code it is testing is not a test.** Three of the
+first draft's did, and an audit found them by mutation. The sum
+`yours + track + machine = played + left over` is *algebra*: `compute()` defines
+the machine's share as whatever is left after yours and the track, so it
+balances however wrong the pile is, and claiming the machine hands back half the
+pile passed the whole suite. It now pins the parts as numbers and checks the
+machine's share against the rate it is supposed to pay, which is the one term
+the sum cannot police. A band asserted with `p10 <= p50` passes when the band has
+collapsed onto its median, which is exactly how ranges break, so those are strict
+and at a launch size with a real spread. And an assertion phrased in terms of
+`STAGE_SPANS` restates the loop in `data.js` that builds it, so the 13 stage
+sizes are written out instead, which is what catches a reward being dropped from
+the file the README calls the one to edit.
+
+Beyond that the suite pins the figures that would otherwise go stale in silence:
+the ~270,100 pinball clear this file and the README both quote, exactly rather
+than within a band, since `pinsToClear()` already rounds to the nearest 100; and
+the two figures the Monte Carlo validated, 12,076 lightbulbs and ~2,795 material
+at 10,000 pinballs and ×1. It also pins one property that reads like a bug and
+is not: **the ladder's Pinballs column does not rise**, because a reward that
+pays pinballs funds part of the way to the next one, so reward 2 costs fewer of
+your own than reward 1 does.
 
 `.github/workflows/ci.yml` runs all of it on every push to `main` and every pull
 request, and then checks that `index.html` still loads its four files as plain
 tags, since a module script or a bundler import would break `file://` quietly.
+It matches whole tags rather than filenames, which appear in comments and in the
+canonical URL and would pass over an inlined bundle that merely mentions them.
+
+`npm test` **names its two files rather than discovering them**: a bare
+`node --test` exits 0 on an empty run, and the discovery patterns have moved
+between node majors, either of which turns a lost test file into a green tick.
+CI then checks that the files on disk and the files named are the same set, so a
+new one nobody wired in fails rather than never running.
