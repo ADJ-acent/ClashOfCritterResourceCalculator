@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A second push to a branch makes the first run pointless, so it is cancelled
+# rather than left racing the new one.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # npm test names its files rather than discovering them, because a bare
+      # `node --test` exits 0 on an empty run and discovery patterns have moved
+      # between node majors, either of which turns a lost test file into a
+      # silent green. So the two lists have to match: a new file nobody wired
+      # in fails here rather than never running.
+      - name: Every test file is actually run
+        run: |
+          on_disk=$(ls tests/*.test.js | wc -l)
+          named=$(grep -o 'tests/[A-Za-z0-9_-]*\.test\.js' package.json | sort -u | wc -l)
+          if [ "$on_disk" -ne "$named" ]; then
+            echo "::error::$on_disk test files in tests/, but npm test names $named"
+            ls tests/*.test.js
+            exit 1
+          fi
+
+      - run: npm test
+
+      # The page is loaded over file:// as plain script and link tags, which is
+      # what keeps it working from a folder as well as from the web. A build
+      # step, a bundler import or a module script would break that quietly, so
+      # the shape of index.html is checked rather than trusted. Matched as whole
+      # tags: the filename alone appears in comments and in the canonical URL,
+      # so grepping for that would pass on an inlined bundle that merely
+      # mentions it.
+      - name: The page still runs with no build step
+        run: |
+          if grep -qiE '<script[^>]*type=.?module' index.html; then
+            echo "::error::index.html loads a module script, which file:// blocks."
+            exit 1
+          fi
+          for f in data.js machine.js app.js; do
+            grep -qF "<script src=\"$f\"></script>" index.html \
+              || { echo "::error::index.html no longer loads $f as a plain script tag"; exit 1; }
+          done
+          grep -qF '<link rel="stylesheet" href="styles.css" />' index.html \
+            || { echo "::error::index.html no longer loads styles.css as a plain link tag"; exit 1; }

@@ -71,7 +71,8 @@ Gold Rush, an average that finishes about half the time.
 
 ## Development
 
-No build step. Open [`index.html`](index.html) and it runs: a static page with
+No build step, and the tests do not add one. Open [`index.html`](index.html)
+and it runs: a static page with
 [`data.js`](data.js) (the track), [`machine.js`](machine.js) (the solver),
 [`app.js`](app.js) (the page) and [`styles.css`](styles.css) loaded as plain
 script and link tags, which is what keeps `file://` working.
@@ -80,7 +81,24 @@ script and link tags, which is what keeps `file://` working.
 holds the 150 rewards stage by stage, the side events and their rates, and the
 notes on where the source chart was unclear.
 
-Layout checks render the page headlessly into `.screenshots/`:
+Tests are `node --test` with jsdom, and they are the only dependency:
+
+```sh
+npm ci
+npm test
+```
+
+`tests/solver.test.js` runs `data.js` and `machine.js` on their own and checks
+the ladder data and the solver: that the distribution is a distribution, that a
+bigger launch keeps the average and widens the spread by its root, that the
+rewards behind you are not paid out twice. `tests/app.test.js` boots the real
+`index.html` in jsdom and drives it through the DOM, including the sum the whole
+pinball account rests on, `yours + track + machine = played + left over`. Both
+run on every pull request and on every push to `main`
+(`.github/workflows/ci.yml`).
+
+Layout is still eyeballed, since nothing asserts on pixels. The screenshots
+render headlessly into `.screenshots/`:
 
 ```sh
 bash scripts/visual-test.sh 1440x900 500x900
