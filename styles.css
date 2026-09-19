@@ -81,6 +81,9 @@ input[type=number], select {
 }
 input[type=number] { width: 130px; font-variant-numeric: tabular-nums; }
 select { width: 100%; }
+/* The x2 goal is chosen from the amounts the track pays, so its box sits where
+   the number box was and keeps its width. */
+#goalStep { width: 130px; }
 input:focus-visible, select:focus-visible, button:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 1px;
 }
@@ -98,6 +101,11 @@ button:hover { border-color: #4a5160; }
 button.danger { color: #ff8a8a; }
 .quick-add { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .quick-add button { font-size: 12px; padding: 4px 8px; font-variant-numeric: tabular-nums; }
+/* Take away as well as add, in four columns so -500 sits under +500 rather than
+   wherever eight wrapped buttons happen to break. */
+.quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+.quick-add button[disabled] { opacity: .45; cursor: default; }
+.quick-add button[disabled]:hover { border-color: var(--line); }
 
 .check { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; color: var(--text); }
 
@@ -414,8 +422,15 @@ table#ladder { width: 100%; border-collapse: collapse; font-size: 13px; table-la
 /* nowrap: the ✓/★ suffix must sit beside the number, not wrap under it. */
 #ladder .n { color: var(--muted); width: 46px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #ladder .cum { color: var(--muted); }
-#ladder tbody tr { cursor: pointer; }
-#ladder tbody tr:hover td { background: var(--panel2); }
+/* Nothing to click while the pinballs are the answer, so the rows stop
+   inviting one: no pointer and no hover. Written as :not() rather than as an
+   override, which would have to out-specify the highlight on the current row
+   as well as the hover it means to cancel. */
+#ladder:not(.no-pick) tbody tr { cursor: pointer; }
+/* :where() so the hover weighs exactly what it did before this mode existed.
+   A heavier selector would beat the current row's own highlight while the
+   pointer sat on it. */
+#ladder:not(:where(.no-pick)) tbody tr:hover td { background: var(--panel2); }
 #ladder tr.done td { color: var(--muted); }
 #ladder tr.done .n::after { content: " ✓"; color: #7fbf7f; }
 #ladder tr.cur td { background: rgba(255, 210, 74, .09); }

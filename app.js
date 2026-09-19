@@ -80,6 +80,30 @@ function bucketMeta(key) {
   return b;
 }
 
+/* The amounts a stepped goal can actually be asked for, cheapest first, or null
+   for a bucket you type a number into.
+
+   The x2 boost is the only stepped one, and it is stepped for two reasons. It
+   arrives in exactly two lumps, 5 minutes and 10, in that order, so the only
+   totals reachable are the running sums of the ones still ahead: 5 and 15, never
+   7 and never 10 on its own, since the track is walked in order. And it is the
+   one bucket measured in minutes, which a box holding a bare number never said.
+   A picker says both at once, and there is nothing left to ask past the ceiling.
+
+   Read from where you stand, so a boost already claimed is not offered again. */
+function goalSteps(key) {
+  if (bucketMeta(key).unit !== 'min') return null;
+  const out = [];
+  let sum = 0;
+  for (let i = state.rung - 1; i < LADDER.length; i++) {
+    const pay = payout(LADDER[i]);
+    if (pay.bucket !== key) continue;
+    sum += pay.qty;
+    out.push(sum);
+  }
+  return out;
+}
+
 /* What the machine pays into a bucket directly, over and above the track: the
    chance a launch that missed the lightbulbs pays it, and what one such payout
    is worth in that bucket's own units.
@@ -720,6 +744,11 @@ function render() {
   for (const b of $('multRow').children) {
     b.classList.toggle('sel', Number(b.dataset.mult) === state.mult);
   }
+
+  // Taking away from nothing is a button that does nothing, so it says so.
+  for (const b of $('quickAdd').children) {
+    if (Number(b.dataset.add) < 0) b.disabled = state.pins === 0;
+  }
 }
 
 function renderSummary(r) {
@@ -1126,6 +1155,11 @@ function shownTitle(n) {
 function renderLadder(r) {
   let cum = 0;
   const rows = [];
+  /* A click fills in the pinballs that reach a reward, which is the answer in
+     "want" mode rather than the question, so there is nothing for a click to
+     fill. It used to switch the mode back and overwrite the goal, which is a
+     bigger thing than a row click looks like it does. */
+  const pick = state.mode === 'have';
 
   for (let i = 0; i < LADDER.length; i++) {
     const step = LADDER[i];
@@ -1148,7 +1182,7 @@ function renderLadder(r) {
     ].filter(Boolean);
     // A stage's first reward draws a heavier rule above it, except the very first.
     if (i > 0 && step.stage !== LADDER[i - 1].stage) cls.push('stage-start');
-    rows.push(`<tr class="${cls.join(' ')}" data-n="${i + 1}" title="Click to enter the pinballs needed to reach this">
+    rows.push(`<tr class="${cls.join(' ')}" data-n="${i + 1}"${pick ? ' title="Click to enter the pinballs needed to reach this"' : ''}>
       <td class="n">${i + 1}</td>
       <td class="st"${shownTitle(i + 1)}>${step.x}/${step.of}</td>
       <td class="rw">${rewardText(step)}</td>
@@ -1159,6 +1193,11 @@ function renderLadder(r) {
   }
 
   $('ladderBody').innerHTML = rows.join('');
+  $('ladder').classList.toggle('no-pick', !pick);
+  $('ladderHint').textContent = pick
+    ? 'Click a row to enter the pinballs needed to reach it.'
+    : 'Rows are not clickable here. Switch to Predict: Rewards to click one for'
+      + ' the pinballs it takes.';
   $('ladderTotal').textContent =
     `${LADDER.length} rewards in ${STAGES.length} stages: ${num(LADDER_TOTAL)} lightbulbs, `
     + `about ${num(pinsToClear())} pinballs to clear.`;
@@ -1331,15 +1370,20 @@ function applyGoal() {
   if (state.mode !== 'want') return;
   const { key, want } = state.goal;
   const meta = bucketMeta(key);
-  if (!(want > 0)) {
-    state.pins = 0;
-    $('goalNote').textContent = 'Enter an amount and pick a resource.';
-    return;
-  }
-  const g = goalSolve(key, want);
   // The short name where there is one: "300 Catch Tatari" reads better than the
   // tile's fuller "Catch Tatari / Capsules", and neither wants lowercasing.
   const name = meta.short || meta.label;
+  if (!(want > 0)) {
+    state.pins = 0;
+    /* A stepped bucket with an empty picker has nothing to enter, so "enter an
+       amount" would be an instruction that cannot be followed. Say why instead. */
+    const steps = goalSteps(key);
+    $('goalNote').textContent = steps && !steps.length
+      ? `No ${name} left on ${TRACK} from here.`
+      : 'Enter an amount and pick a resource.';
+    return;
+  }
+  const g = goalSolve(key, want);
   if (g.pins == null) {
     // Nothing left to aim at. Where a setting is the reason, say which, since
     // "no more" alone would read as the track having run dry.
@@ -1516,6 +1560,28 @@ function refreshGoalKeys() {
     if (opt.textContent !== label) opt.textContent = label;
   }
   if (sel.value !== state.goal.key) sel.value = state.goal.key;
+
+  /* A stepped bucket is picked from, not typed into, so the two controls trade
+     places and only one is ever on screen. The list moves with where you stand,
+     so it is rebuilt when it changes and left alone when it has not, which keeps
+     an open picker from closing under the mouse on an unrelated render. */
+  const steps = goalSteps(state.goal.key);
+  const box = $('goalStep');
+  $('goalAmountBox').hidden = !!steps;
+  $('goalStepBox').hidden = !steps;
+  if (!steps) return;
+  const sig = steps.join(',');
+  if (box.dataset.sig !== sig) {
+    box.dataset.sig = sig;
+    box.innerHTML = steps.length
+      ? steps.map((m) => `<option value="${m}">${m} min</option>`).join('')
+      : '<option value="0">none left</option>';
+  }
+  box.disabled = !steps.length;
+  // Normalised here rather than in the handler, because what is reachable moves
+  // with the position as well: a remembered 15 is not 15 once one is claimed.
+  if (!steps.includes(state.goal.want)) state.goal.want = steps[0] || 0;
+  box.value = String(state.goal.want);
 }
 
 function init() {
@@ -1714,15 +1780,17 @@ function init() {
   const readGoal = (wait) => {
     clearTimeout(goalTimer);
     goalTimer = setTimeout(() => {
-      state.goal = {
-        key: $('goalKey').value,
-        want: Math.max(0, Math.floor(Number($('goalAmount').value) || 0)),
-      };
+      const key = $('goalKey').value;
+      // A stepped bucket is read off its picker; the number box beside it is
+      // hidden and still holds whatever was typed for the previous resource.
+      const box = goalSteps(key) ? $('goalStep') : $('goalAmount');
+      state.goal = { key, want: Math.max(0, Math.floor(Number(box.value) || 0)) };
       state.target = null;
       update();
     }, wait);
   };
   $('goalAmount').addEventListener('input', () => readGoal(250));
+  $('goalStep').addEventListener('change', () => readGoal(0));
   $('goalKey').addEventListener('change', () => readGoal(0));
 
   $('multRow').innerHTML = MULTIPLIERS
@@ -1768,6 +1836,8 @@ function init() {
 
   // Clicking a rung answers the other question: how many pinballs get me there?
   $('ladderBody').addEventListener('click', (e) => {
+    // Nothing to fill in while the pinballs are what the page is working out.
+    if (state.mode !== 'have') return;
     const tr = e.target.closest('tr[data-n]');
     if (!tr) return;
     smoothOnce = true;

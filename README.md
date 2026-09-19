@@ -20,7 +20,9 @@ which shares this one's palette and page shell.
 - **Predict Pinballs needed.** Name a goal instead, say 6,000 fishing rods or
   20,000 pinballs played, and it solves for the pinballs to bring, with the
   figures for a 90% and a 10% chance beside it. Ask for more than the track has
-  left and it answers for what is left, and says so.
+  left and it answers for what is left, and says so. The x2 multiplier is picked
+  from a list rather than typed, since it arrives in two fixed lumps and is
+  measured in minutes.
 - **Show ranges.** Every figure that luck touches carries the band 80% of runs
   land in. Off by default, since it costs a little speed on a goal.
 - **Show possible outcomes chart.** The whole distribution, and clicking it
@@ -28,7 +30,9 @@ which shares this one's palette and page shell.
 - **Preexisting progress.** Enter where you already are the way the event window
   shows it: Grand Prize Progress, the grand prize, and the lightbulbs on the bar.
 - **The whole track.** All 150 rewards in 13 stages, with costs, running totals
-  and the pinballs needed to reach each one. Click a row to fill that in.
+  and the pinballs needed to reach each one. Under Predict Rewards, click a row
+  to fill that in; under Predict Pinballs needed the pinballs are the answer, so
+  there is nothing for a click to fill and the rows are read only.
 - **The settings that change the answer:** which side event is running, Gold
   Rush, the launch size, and whether the pinballs the track and the machine pay
   are played again.

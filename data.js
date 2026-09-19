@@ -348,7 +348,8 @@ const HELP = {
 
   need: 'Pinballs needed from where you are to reach this reward on an average run, counting '
       + 'pinballs paid back on the way.\n\n'
-      + 'A tick means the reward is claimed on the run shown. Click a row to enter its number.',
+      + 'A tick means the reward is claimed on the run shown. Under Predict: Rewards, '
+      + 'click a row to enter its number.',
 
   credits: 'Thanks to Militsa, and to everyone else who helped me collect the '
          + TRACK + ' data.',

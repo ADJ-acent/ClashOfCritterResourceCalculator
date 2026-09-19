@@ -139,6 +139,11 @@ lightbulbs against 12,076, 2,793 material against 2,795).
   derived one moves with the launch size and replay setting, which would shift
   the scale under the handle. That is now a small part of a full clear, so a
   bigger pile is typed.
+* The steps beside it go both ways, -100 to -5,000 above +100 to +5,000, because
+  overshooting by 5,000 otherwise means retyping the whole figure. They are laid
+  out as a four column grid rather than a wrapping row, so each step sits above
+  its own opposite instead of wherever eight buttons happen to break, and the
+  four that take away go disabled at 0, where they would do nothing.
 * Event material is dominated by the machine, not the ladder: ~71,800 units vs
   2,120 over a full clear. During Gold Rush **energy cans work the same way** and
   at the same rate, which turns them from 4,105 off the track into about 76,000.
@@ -166,6 +171,14 @@ controls in the sidebar:
 Clicking any ladder row fills in the pinballs that get you there. Note it often
 carries you *past* that reward: reaching reward 48 hands you 1,000 pinballs,
 which is worth three more rewards on its own.
+
+**Only while the pinballs are the question.** In "Predict: Pinballs needed" they
+are the answer, so there is nothing for a click to fill: what it used to do was
+switch the mode back and overwrite the goal, which is a larger thing than a row
+click looks like it does. There the rows lose the pointer, the hover and the
+tooltip, and the line under the table says which mode to be in. The one
+exception is the hover rule's own weight, written with `:where()` so it still
+loses to the highlight on the current row.
 
 ### Working backwards from a goal
 
@@ -236,6 +249,17 @@ The three kinds of resource still behave differently:
   When the ceiling is 0, because every reward paying it is behind you or a
   setting has switched it off (drinks without Gold Rush, material with no side
   event), it says so, and which setting, and there is nothing to show.
+  The **x2 boost** is a ceiling small enough to enumerate, so it is picked from
+  a list instead (`goalSteps()`). It arrives in exactly two lumps, 5 minutes and
+  10, and the track is walked in order, so the only totals reachable are the
+  running sums of the ones still ahead: 5 and 15, never 7 and never 10 on its
+  own unless the first is already claimed. It is also the one bucket measured in
+  minutes, which a box holding a bare number never said. The list is read from
+  where you stand and rebuilt only when it changes, a remembered amount that is
+  no longer on it snaps to the cheapest one, and with every boost behind you the
+  picker says so and the note names the reason. Nothing can be asked past the
+  ceiling, so the "only N left" answer above never arises here.
+
 * **Event material**, and **energy cans during Gold Rush**, trickle from every
   launch as well, so they have **no** ceiling. They are also the goals still
   random once the lightbulbs are settled,

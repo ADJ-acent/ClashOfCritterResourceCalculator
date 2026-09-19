@@ -73,7 +73,13 @@
       <input id="slider" class="slider" type="range" min="0" max="50000" step="10" value="0"
              aria-label="Pinballs in hand" />
       <div class="slider-scale"><span>0</span><span id="sliderMax"></span></div>
-      <div class="quick-add" id="quickAdd">
+      <!-- A grid rather than a wrapping row, so each step sits above its own
+           opposite instead of landing wherever the line break falls. -->
+      <div class="quick-add quick-grid" id="quickAdd">
+        <button data-add="-100">-100</button>
+        <button data-add="-500">-500</button>
+        <button data-add="-1000">-1,000</button>
+        <button data-add="-5000">-5,000</button>
         <button data-add="100">+100</button>
         <button data-add="500">+500</button>
         <button data-add="1000">+1,000</button>
@@ -84,8 +90,13 @@
     <section id="wantBox" hidden>
       <h2>Goal</h2>
       <div class="row">
-        <label><span class="sr-label">Amount wanted</span>
+        <label id="goalAmountBox"><span class="sr-label">Amount wanted</span>
           <input id="goalAmount" type="number" min="0" step="10" value="0" inputmode="numeric" />
+        </label>
+        <!-- The x2 boost arrives in two fixed lumps and is measured in minutes,
+             neither of which a number box says. One of these two is on screen. -->
+        <label id="goalStepBox" hidden><span class="sr-label">Amount wanted</span>
+          <select id="goalStep"></select>
         </label>
         <label><span class="sr-label">Resource wanted</span>
           <select id="goalKey"></select>
@@ -210,7 +221,7 @@
       </table>
     </div>
     <div class="hint" id="ladderTotal"></div>
-    <div class="hint">Click a row to enter the pinballs needed to reach it.</div>
+    <div class="hint" id="ladderHint"></div>
 
   </div>
 </div>
