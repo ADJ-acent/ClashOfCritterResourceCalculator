@@ -207,10 +207,13 @@ function solveMachine(pins, banked, mult = 1, replay = true, stretch = 1, gold =
    weights that reproduce a normal's shape with three samples of it, exact for
    anything polynomial up to the fifth power. Five points were tried and agreed
    with a simulation no better, for nearly twice the work. */
+/* Written as fractions rather than as decimals: rounded to seven places the
+   three weights sum to 1.0000001, which is a tenth of a millionth on every
+   probability the solve returns, for nothing. */
 const NORMAL_POINTS = [
-  { z: -1.7320508, w: 0.1666667 },
-  { z: 0,          w: 0.6666667 },
-  { z: 1.7320508,  w: 0.1666667 },
+  { z: -Math.sqrt(3), w: 1 / 6 },
+  { z: 0,             w: 2 / 3 },
+  { z: Math.sqrt(3),  w: 1 / 6 },
 ];
 
 /* -> [[k, probability], ...], the whole loop, with the machine's own pinball

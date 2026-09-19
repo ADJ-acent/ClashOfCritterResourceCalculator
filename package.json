@@ -1,0 +1,13 @@
+{
+  "name": "clash-of-critters-reward-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tatari Party reward track calculator (single-page web app).",
+  "scripts": {
+    "test": "node --test",
+    "screenshots": "bash scripts/visual-test.sh"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}

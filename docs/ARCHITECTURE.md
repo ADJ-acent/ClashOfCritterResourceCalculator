@@ -568,7 +568,9 @@ whichever yields more.
   than exactly, which leaves a **+0.3% bias on the mean at ×200** and, because
   the launches a given `k` can afford still use the average payback, a slightly
   tight spread on the pinballs played and on the material and cans that ride on
-  them.
+  them. The mixture's three weights are written as thirds and sixths rather than
+  as decimals: rounded to seven places they summed to 1.0000001, which put a
+  tenth of a millionth on every probability the solve returned.
 * The lightbulb has no icon. It is downloaded content, absent from the client's
   shipped bundles.
 
@@ -580,3 +582,49 @@ No build step, open `index.html`. For layout checks:
 bash scripts/visual-test.sh 1440x900 500x900
 QUERY='?i=g&ga=5000&gk=material&s=1' bash scripts/visual-test.sh 1280x950   # start in a given state
 ```
+
+### The tests
+
+`npm test` is `node --test`, and jsdom is the only dependency. They split the
+way the page does.
+
+**`tests/solver.test.js` never touches the DOM.** `data.js` and `machine.js`
+declare consts and functions in the global scope with nothing to `require`, so
+they run in one `vm` context, which is what a browser does with two `<script
+src>` tags, and the context is the module the tests read from. It covers the
+ladder data, where a missing figure would otherwise pay `undefined` in one side
+event and be right in the other five, and the solver's own properties: that the
+result is a distribution in order, that the same inputs give the same answer
+every time, that with nothing coming back it collapses to the single binomial
+that can be written down by hand, that a ×n launch keeps the average and widens
+the spread by √n, and that the rewards behind you are not handed over twice.
+
+**`tests/app.test.js` boots the real `index.html`.** The three scripts are
+inlined into the markup in place, same files and same order, because jsdom does
+not fetch external scripts under `runScripts: "dangerously"` and turning on
+`resources: "usable"` would make every boot asynchronous for nothing. The page
+still boots itself off `DOMContentLoaded`, which jsdom fires after the
+constructor returns, so `boot()` **waits for that event rather than dispatching
+it**: a hand-fired one would boot a page the browser had not finished and would
+pass whether or not the wiring works.
+
+Two things there are worth knowing before writing another test.
+`state` and nearly everything else is a `const`, so it is not a property of
+`window` and has to be reached by evaluating in the page (`ev`, `run`). And
+**where you stand cannot be assigned**: `render()` re-derives the rung from the
+two Grand Prize Progress boxes every time, which is what keeps the counter and
+the position from drifting apart, so a test moves the boxes (`standOn`) the way
+a player does. Values read out of the page are from another realm, so they
+compare by value rather than with `deepStrictEqual`.
+
+The suite pins the two claims that would otherwise go stale in silence: the sum
+`yours + track + machine = played + left over`, at every launch size and with
+either payback switched off, and the ~270,100 pinball clear this file and the
+README both quote. It also pins one property that reads like a bug and is not:
+**the ladder's Pinballs column does not rise**, because a reward that pays
+pinballs funds part of the way to the next one, so reward 2 costs fewer of your
+own than reward 1 does.
+
+`.github/workflows/ci.yml` runs all of it on every push to `main` and every pull
+request, and then checks that `index.html` still loads its four files as plain
+tags, since a module script or a bundler import would break `file://` quietly.
