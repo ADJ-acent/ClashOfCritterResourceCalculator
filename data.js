@@ -39,9 +39,11 @@ const TRACK = 'Tatari Party';
 const COMMUNITY = 'https://discord.com/channels/1343763804349267989/1549589087495786547';
 
 /* A material reward's amounts, in the chart's own order: Flying Shoes / Iron
-   Pickaxe / Raft / Fishing Rod / Bullet Coins / Magic Fertilizer. */
+   Pickaxe / Raft / Fishing Rod / Bullet Coins / Magic Fertilizer. Torches came
+   after the chart and pay the raft amount on every reward, so they are not a
+   column of their own. */
 const mat = (shoes, pickaxe, raft, rod, coins, fertiliser) =>
-  ({ shoes, pickaxe, raft, rod, coins, fertiliser });
+  ({ shoes, pickaxe, raft, rod, coins, fertiliser, torch: raft });
 
 /* One array per stage, its rewards in order, the last being the one the stage
    ends on. The stage counter is worked out from the position, so a correction is
@@ -242,14 +244,15 @@ STAGES.forEach((rewards, g) => {
 /* The side events, and what a material reward pays in each.
 
    `mat` is which of a material reward's amounts the event pays, and `per` is
-   what one of the machine's material payouts is worth in it: 1 raft, rod or
-   pickaxe, 2 fertilizer, 100 bullet coins. Flying Shoes get 0, because the
+   what one of the machine's material payouts is worth in it: 1 torch, raft, rod
+   or pickaxe, 2 fertilizer, 100 bullet coins. Flying Shoes get 0, because the
    machine pays them too rarely to count, so Marathon Star is the track's shoes
    alone. With no side event running, material rewards pay their candy and the
    machine pays no material at all.
 
    `icon` is the game's own sprite, pulled from the client's asset bundles. */
 const SIDE_EVENTS = [
+  { id: 'artifact', name: 'Artifact Adventure', material: 'Torches',      mat: 'torch',      per: 1,   icon: 'icons/torch.png' },
   { id: 'raft',     name: 'Raft Race',     material: 'Raft',             mat: 'raft',       per: 1,   icon: 'icons/raft.png' },
   { id: 'fishing',  name: 'Fishing',       material: 'Fishing Rods',     mat: 'rod',        per: 1,   icon: 'icons/rods.png' },
   { id: 'treasure', name: 'Treasure Hunt', material: 'Iron Pickaxes',    mat: 'pickaxe',    per: 1,   icon: 'icons/pickaxe.png' },
@@ -282,7 +285,7 @@ const HELP = {
      for reference and shown nowhere. */
   event: 'Material rewards on ' + TRACK + ' pay the material of the side event, in the amounts '
        + 'the game shows for that event. With no side event, they pay candy.\n\n'
-       + 'The machine also pays material: 1 raft, fishing rod or iron pickaxe, 2 magic '
+       + 'The machine also pays material: 1 torch, raft, fishing rod or iron pickaxe, 2 magic '
        + 'fertilizer or 100 bullet coins per payout. Marathon Star counts only the shoes from '
        + 'the track.',
 
@@ -432,7 +435,7 @@ const HELP_FIGURES = {
    under "Known gaps". */
 const DATA_NOTES = [
   'The ladder is the full chart: 150 rewards in 13 stages, with the stage counter, every candy amount and every event material printed.',
-  'Material amounts are stored as printed per event. They sit near 1 raft = 1 rod = 1 pickaxe = 2 fertilizer = 100 bullet coins, but not on it (4,920 and 4,900 bullet coins where 5,000 would fit, 495 fertilizer for 250 rafts), and Flying Shoes follow no rate at all.',
+  'Material amounts are stored as printed per event. They sit near 1 torch = 1 raft = 1 rod = 1 pickaxe = 2 fertilizer = 100 bullet coins, but not on it (4,920 and 4,900 bullet coins where 5,000 would fit, 495 fertilizer for 250 rafts), and Flying Shoes follow no rate at all.',
   'The chart leaves the fishing rods off the 350 lightbulb material reward in the x/8 stage ending on 30 Catch Tatari. It is stored as 50, as on every other reward of that size.',
   'Earlier recordings had two rewards at 240 lightbulbs after the ×600 multiplier, 120 pinballs and then 100 energy drinks. They are one reward: 100 energy drinks during Gold Rush, 120 pinballs without it. Every reward after it is one lower than in older links.',
   'Earlier recordings had the 10 Catch Tatari after 480 pinballs at 540 lightbulbs, and the 350 lightbulb reward after it as candy. The chart has 640, and a material reward that pays candy only with no side event running.',
