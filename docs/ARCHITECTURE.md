@@ -151,10 +151,10 @@ lightbulbs against 12,076, 2,793 material against 2,795).
 Two conditions decide what a rung actually hands you, and they are the two
 controls in the sidebar:
 
-* **Which side event is running**: Raft Race (which was Marathon), Fishing,
+* **Which side event is running**: Artifact Adventure, Raft Race (which was Marathon), Fishing,
   Treasure Hunt, Zobo Shooter, Cozy Farm, Marathon Star, or none. Material
   rewards pay that event's material, and the chart prints the amount for each.
-  They sit near a fixed rate, 1 raft = 1 fishing rod = 1 iron pickaxe = 2 magic
+  They sit near a fixed rate, 1 torch = 1 raft = 1 fishing rod = 1 iron pickaxe = 2 magic
   fertilizer = 100 bullet coins, but not on one (4,920 bullet coins where 5,000
   would fit, and Flying Shoes follow no rate at all), so the ladder stores every
   amount as printed and `SIDE_EVENTS[].mat` picks one. With no side event
@@ -486,7 +486,7 @@ The buckets:
 * **Candy**, summed, now that the chart prints every amount. It also takes what
   the drink rewards pay without Gold Rush and what the material rewards pay with
   no side event running.
-* **Material**, named by the running side event (Raft, Fishing Rods, Iron
+* **Material**, named by the running side event (Torches, Raft, Fishing Rods, Iron
   Pickaxes, Bullet Coins, Magic Fertilizer, Flying Shoes), and empty with none
   running.
 * **Blue Card Packs**, five on the track, one pack each. The chart prints candy
@@ -527,6 +527,10 @@ The raft is not in `inpackage_aa_1.lpak`. It arrived in the 2026-09-09 patch,
 `txui_item_teamrun_rafting`, beside the boards' `txui_item_teamrun`: Raft Race is
 Marathon's event (`teamrun`) with a new skin. For a later event, list the patch
 folders by date and scan the newest first.
+
+The torch was not extracted. `icons/torch.png` is the Artifact Adventure torch
+from another fan calculator's assets, converted from WebP at its own 70 by 124.
+Replace it with the client sprite when the patch that carries it is opened.
 
 To repeat the extraction: the guest filesystem is a file on the Windows side 
 `Engine\Pie64\Data.vhdx`, readable with `libvhdi-python` + `pytsk3`, and the

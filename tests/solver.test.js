@@ -87,11 +87,11 @@ test('every reward pays a bucket the page has a tile for', () => {
 
 /* A material reward pays the running event's own printed amount, or its candy
    when no side event is running. A missing amount would silently pay undefined
-   in one event and be right in the other five. */
+   in one event and be right in the other six. */
 test('every material reward is priced for every side event', () => {
   const keys = SIDE_EVENTS.map((e) => e.mat).filter(Boolean);
   const mats = LADDER.filter((s) => s.res === 'material');
-  assert.strictEqual(keys.length, 6, 'six events pay a material of their own');
+  assert.strictEqual(keys.length, 7, 'seven events pay a material of their own');
   assert.ok(mats.length > 0, 'and there are material rewards to price');
   for (const step of mats) {
     for (const k of keys) {
